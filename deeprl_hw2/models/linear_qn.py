@@ -60,8 +60,9 @@ class LinearQN:
         return q_val
         
     # map state to Q-value vector
-    def forward(self,model,state_input,action_input=None,isActive_input=None):
+    def forward(self,state_input,action_input=None,isActive_input=None):
         # Get q value
+        q_vec = tf.matmul(state_input, self.W_fc1)+self.b_fc1
         if isActive_input is not None:
             q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),isActive_input)
             # No backprop
@@ -98,7 +99,7 @@ class LinearQN:
         # 1.0 if a terminal state is found
         self.terminal_input = tf.placeholder(tf.float64,[None])
         
-        isActive_input = tf.ones(self.terminal_input.shape(),dtype=tf.float64)-self.terminal_input
+        isActive_input = tf.ones(tf.shape(self.terminal_input),dtype=tf.float64)-self.terminal_input
         
         self.pred_q = self.forward(self.state_input,action_input=self.action_input)
         if self.hasTarget:

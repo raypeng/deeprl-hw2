@@ -1,5 +1,6 @@
 from atari_environment import AtariEnv
 from replay_memory import ReplayMemory
+from models.linear_qn import LinearQN
 # from deep_q import DeepQ
 
 
@@ -16,7 +17,7 @@ T = 10000
 
 env_name = 'SpaceInvaders-v0'
 env = AtariEnv(env_name)
-model = DeepQ()
+model = LinearQN()
 
 sample_from_replay = True # False for Q2
 if sample_from_replay:
@@ -63,6 +64,6 @@ def _train_on_samples(model, samples):
         model.action_input: action_list,
         model.reward_input: reward_list,
         model.nextState_input: next_state_list,
-        model.isTerminal_input: is_terminal_list
+        model.terminal_input: is_terminal_list
     })
     return loss
