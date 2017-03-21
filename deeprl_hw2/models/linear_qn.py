@@ -46,18 +46,21 @@ class LinearQN:
         else:
             print "Could not find old network weights"
         
+        self.resetTarget()
+        
+    def resetTarget(self):
         if self.hasTarget:
             self.targetW = tf.identity(self.W_fc1)
             self.targetB = tf.identity(self.b_fc1)
-    
+            
     # Use target network to forward
-    def forwardTarget(self,state_input):
+    def forwardTarget(self,state_input,terminal_input):
         q_vec = tf.matmul(state_input, self.targetW)+targetB
-        q_val = tf.reduce_max(q_vec,axis=1)
+        q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),terminal_input)
         return q_val
         
     # map state to Q-value vector
-    def forward(self,state_input,action_input=None):
+    def forward(self,state_input,action_input=None,terminal_input=None):
         # network input
         with tf.name_scope('fc1'):
             self.W_fc1 = tf.Variable(tf.truncated_normal([self.inputH,self.inputW,self.stateFrames,self.actionNum]),
@@ -67,13 +70,15 @@ class LinearQN:
                                 name='biases')
             q_vec = tf.matmul(state_input, self.W_fc1)+self.b_fc1
         # Get q value
-        if action_input is None:
-            q_val = tf.reduce_max(q_vec,axis=1)
+        if terminal_input is not None:
+            q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),terminal_input)
             # No backprop
             q_val = tf.stop_gradient(q_val)
-        else:
+        elif action_input is not None:
             actions = tf.one_hot(action_input, self.actionNum, dtype=np.float64) 
             q_val = tf.reduce_sum(tf.multiply(q_vec,actions),axis=1)
+        else:
+            raise Exception("Either action or terminal must be provided")
             
         return q_val
     
@@ -86,30 +91,19 @@ class LinearQN:
 
         loss = tf.reduce_mean(clipped_error, name='loss')
         return loss
-        
-    '''
-    def pushReplay(self,record):
-        while len(self.replayMemory>=self.memorySize):
-            self.replayMemory.popLeft()
-        self.replayMemory.append(record)
-    '''
     
     def buildModel(self):
-        '''
-        # Do the push in main
-        if self.withReplay:
-            self.pushReplay(record)
-        '''
         self.state_input = tf.placeholder(tf.float64,[None, self.inputH, self.inputW, self.stateFrames])
         self.action_input = tf.placeholder(tf.int32,[None])
         self.reward_input = tf.placeholder(tf.float64,[None])
         self.nextState_input = tf.placeholder(tf.float64,[None, self.inputH, self.inputW, self.stateFrames])
-        self.terminal_input = tf.placeholder(tf.bool,[None])
+        # 0 if the state is a terminal state
+        self.terminal_input = tf.placeholder(tf.float64,[None])
         
-        self.pred_q = self.forward(self.state_input,self.action_input)
+        self.pred_q = self.forward(self.state_input,action_input=self.action_input)
         if self.hasTarget:
-            self.target_q = self.forwardTarget(self.nextState_input) + self.reward_input
+            self.target_q = self.forwardTarget(self.nextState_input,terminal_input=self.terminal_input) + self.reward_input
         else:
-            self.target_q = self.forward(self.nextState_input) + self.reward_input
+            self.target_q = self.forward(self.nextState_input,terminal_input=self.terminal_input) + self.reward_input
         self.batch_loss = self.loss(self.pred_q,self.target_q)
     
