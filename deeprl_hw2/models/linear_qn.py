@@ -18,12 +18,10 @@ NUM_ACTIONS = 3
 MODEL_DIR = 'linear/no_replay'
 
 class LinearQN:
-
-	def __init__(self,withReplay=False):
-         
-		# init some parameters
-		self.stepCount = 0
-		self.epsilon = EPSILON
+    def __init__(self,withReplay=False):
+        # init some parameters
+        self.stepCount = 0
+        self.epsilon = EPSILON
         self.stateFrames = STATE_FRAMES
         self.inputH = H
         self.inputW = W
@@ -31,26 +29,26 @@ class LinearQN:
         self.batchSize = BATCH_SIZE
         self.maxIter = NUM_ITERS
         self.memorySize = REPLAY_MEMORY
-		self.actionNum = NUM_ACTIONS
+        self.actionNum = NUM_ACTIONS
         
-		# Build model here
+        # Build model here
         self.buildModel()
         
         # Start a session and load the model
-		self.saver = tf.train.Saver()
-		self.session = tf.InteractiveSession()
-		self.session.run(tf.initialize_all_variables())
-		checkpoint = tf.train.get_checkpoint_state(MODEL_DIR)
-		if checkpoint and checkpoint.model_checkpoint_path:
+        self.saver = tf.train.Saver()
+        self.session = tf.InteractiveSession()
+        self.session.run(tf.initialize_all_variables())
+        checkpoint = tf.train.get_checkpoint_state(MODEL_DIR)
+        if checkpoint and checkpoint.model_checkpoint_path:
             self.saver.restore(self.session, checkpoint.model_checkpoint_path)
             print "Successfully loaded:", checkpoint.model_checkpoint_path
-		else:
+        else:
             print "Could not find old network weights"
 
     # map state to Q-value vector
     def forward(self,state_input,action_input=None):
         # network input
-		with tf.name_scope('fc1'):
+        with tf.name_scope('fc1'):
             W_fc1 = self.weight_variable([self.inputH,self.inputW,self.stateFrames,self.actionNum])
             W_fc1 = tf.Variable(tf.truncated_normal([self.inputH,self.inputW,self.stateFrames,self.actionNum]),
                                 stddev=0.01,
@@ -63,7 +61,7 @@ class LinearQN:
             q_val = tf.reduce_max(q_vec,axis=1)
             # No backprop
             q_val = tf.stop_gradient(q_val)
-		else:
+        else:
             actions = tf.one_hot(action_input, self.actionNum, dtype=np.float64) 
             q_val = tf.reduce_sum(tf.multiply(q_vec,actions),axis=1)
             
@@ -93,9 +91,9 @@ class LinearQN:
             self.pushReplay(record)
         '''
         self.state_input = tf.placeholder(tf.float64,[None, self.inputH, self.inputW, self.stateFrames])
-		self.action_input = tf.placeholder(tf.int32,[None])
-		self.reward_input = tf.placeholder(tf.float64,[None])
-		self.nextState_input = tf.placeholder(tf.float64,[None, self.inputH, self.inputW, self.stateFrames])
+        self.action_input = tf.placeholder(tf.int32,[None])
+        self.reward_input = tf.placeholder(tf.float64,[None])
+        self.nextState_input = tf.placeholder(tf.float64,[None, self.inputH, self.inputW, self.stateFrames])
         self.terminal_input = tf.placeholder(tf.bool,[None])
         
         self.pred_q = self.forward(self.state_input,self.action_input)
