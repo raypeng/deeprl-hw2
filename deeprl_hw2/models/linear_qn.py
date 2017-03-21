@@ -54,24 +54,16 @@ class LinearQN:
             self.targetB = tf.identity(self.b_fc1)
             
     # Use target network to forward
-    def forwardTarget(self,state_input,terminal_input):
+    def forwardTarget(self,state_input,isActive_input):
         q_vec = tf.matmul(state_input, self.targetW)+targetB
-        q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),terminal_input)
+        q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),isActive_input)
         return q_val
         
     # map state to Q-value vector
-    def forward(self,state_input,action_input=None,terminal_input=None):
-        # network input
-        with tf.name_scope('fc1'):
-            self.W_fc1 = tf.Variable(tf.truncated_normal([self.inputH,self.inputW,self.stateFrames,self.actionNum]),
-                                stddev=0.01,
-                                name='weights')
-            self.b_fc1 = tf.Variable(tf.zeros([self.actionNum]),
-                                name='biases')
-            q_vec = tf.matmul(state_input, self.W_fc1)+self.b_fc1
+    def forward(self,model,state_input,action_input=None,isActive_input=None):
         # Get q value
-        if terminal_input is not None:
-            q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),terminal_input)
+        if isActive_input is not None:
+            q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),isActive_input)
             # No backprop
             q_val = tf.stop_gradient(q_val)
         elif action_input is not None:
@@ -82,7 +74,7 @@ class LinearQN:
             
         return q_val
     
-    def loss(self, pred_vals, target_vals):
+    def getLoss(self, pred_vals, target_vals):
         # Use huber loss for more robust performance
         delta = target_vals - pred_vals 
         clipped_error = tf.where(tf.abs(delta) < 1.0,
@@ -92,18 +84,29 @@ class LinearQN:
         loss = tf.reduce_mean(clipped_error, name='loss')
         return loss
     
+    def getAction(self):
+        self.single_state_input = tf.placeholder(tf.float64,[self.inputH, self.inputW, self.stateFrames])
+        q_vec = tf.matmul(self.single_state_input, self.W_fc1)+self.b_fc1
+        action = tf.argmax(q_vec, axis=1)
+        return action
+        
     def buildModel(self):
         self.state_input = tf.placeholder(tf.float64,[None, self.inputH, self.inputW, self.stateFrames])
         self.action_input = tf.placeholder(tf.int32,[None])
         self.reward_input = tf.placeholder(tf.float64,[None])
         self.nextState_input = tf.placeholder(tf.float64,[None, self.inputH, self.inputW, self.stateFrames])
-        # 0 if the state is a terminal state
+        # 1.0 if a terminal state is found
         self.terminal_input = tf.placeholder(tf.float64,[None])
+        
+        isActive_input = tf.ones(self.terminal_input.shape(),dtype=tf.float64)-self.terminal_input
         
         self.pred_q = self.forward(self.state_input,action_input=self.action_input)
         if self.hasTarget:
-            self.target_q = self.forwardTarget(self.nextState_input,terminal_input=self.terminal_input) + self.reward_input
+            self.target_q = self.forwardTarget(self.nextState_input,terminal_input=isActive_input) + self.reward_input
         else:
-            self.target_q = self.forward(self.nextState_input,terminal_input=self.terminal_input) + self.reward_input
-        self.batch_loss = self.loss(self.pred_q,self.target_q)
-    
+            self.target_q = self.forward(self.nextState_input,terminal_input=isActive_input) + self.reward_input
+        self.batch_loss = self.getLoss(self.pred_q,self.target_q)
+        
+        # Create the gradient descent optimizer with the given learning rate.
+        self.optimizer = tf.train.GradientDescentOptimizer(self.learningRate)
+        self.train_op = self.optimizer.minimize(self.batch_loss)
