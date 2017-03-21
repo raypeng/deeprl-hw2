@@ -33,6 +33,7 @@ class LinearQN:
         self.hasTarget = fixTarget
         
         # Build model here
+        self.W_fc1, self.b_fc1 = self.createNetwork()
         self.buildModel()
         
         # Start a session and load the model
@@ -47,6 +48,15 @@ class LinearQN:
             print "Could not find old network weights"
         
         self.resetTarget()
+
+    def createNetwork(self):
+        # network input
+        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH,self.inputW,self.stateFrames,self.actionNum]),
+                            stddev=0.01,
+                            name='weights')
+        b_fc1 = tf.Variable(tf.zeros([self.actionNum]),
+                            name='biases')
+        return W_fc1, b_fc1
         
     def resetTarget(self):
         if self.hasTarget:
