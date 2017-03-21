@@ -1,5 +1,8 @@
 """Main DQN agent."""
 
+from copy import deepcopy
+
+
 class DQNAgent:
     """Class implementing DQN.
 
@@ -48,7 +51,16 @@ class DQNAgent:
                  num_burn_in,
                  train_freq,
                  batch_size):
-        pass
+        self.online_qn = q_network
+        self.target_qn = deepcopy(q_network)
+        self.preprocessor = preprocessor
+        self.replay_memory = memory
+        self.policy = polocy
+        self.gamma = gamma
+        self.target_update_freq = target_update_freq
+        self.num_burn_in = num_burn_in # TODO
+        self.train_freq = train_freq
+        self.batch_size = batch_size
 
     def compile(self, optimizer, loss_func):
         """Setup all of the TF graph variables/ops.
@@ -67,9 +79,11 @@ class DQNAgent:
         keras.optimizers.Optimizer class. Specifically the Adam
         optimizer.
         """
-        pass
+        # TODO reduce lr schedule
+        self.online_qn.compile(loss=loss_func,
+                               optimizer=optimizer)
 
-    def calc_q_values(self, state):
+    def target_q_values(self, state):
         """Given a state (or batch of states) calculate the Q-values.
 
         Basically run your network on these states.
@@ -78,9 +92,12 @@ class DQNAgent:
         ------
         Q-values for the state(s)
         """
-        pass
+        return self.target_qn.predict(state)
 
-    def select_action(self, state, **kwargs):
+    def online_q_values(self, state):
+        return self.online_qn.predict(state)
+
+    def select_action(self, state):
         """Select the action based on the current state.
 
         You will probably want to vary your behavior here based on
@@ -101,7 +118,10 @@ class DQNAgent:
         --------
         selected action
         """
-        pass
+        state = self.preprocessor.process_state_for_network(state)
+        q_values = self.online_q_values(state)
+        is_training = True # TODO
+        return self.policy.select_action(q_values, is_training=is_training)
 
     def update_policy(self):
         """Update your policy.
@@ -120,7 +140,7 @@ class DQNAgent:
         """
         pass
 
-    def fit(self, env, num_iterations, max_episode_length=None):
+    def fit(self, env, num_iter, max_episode_length):
         """Fit your model to the provided environment.
 
         Its a good idea to print out things like loss, average reward,
@@ -136,16 +156,23 @@ class DQNAgent:
         Parameters
         ----------
         env: gym.Env
-          This is your Atari environment. You should wrap the
-          environment using the wrap_atari_env function in the
-          utils.py
+          This is your Atari environment.
         num_iterations: int
           How many samples/updates to perform.
         max_episode_length: int
           How long a single episode should last before the agent
           resets. Can help exploration.
         """
-        pass
+        init_replay_memory() # already done?
+        init_online_qn_weights()
+        self.target_qn.load_weights(self.online_qn.get_weights())
+        curr_iter = 0
+        while curr_iter < num_iter:
+            _obs = env.reset()
+            episode_length = 0
+            obs_n = self.preprocess_for_network(_obs)
+            obs_m = self.preprocess_for_memory(_obs)
+            
 
     def evaluate(self, env, num_episodes, max_episode_length=None):
         """Test your agent with a provided environment.

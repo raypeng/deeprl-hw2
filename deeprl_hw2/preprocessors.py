@@ -1,6 +1,8 @@
 """Suggested Preprocessors."""
 
+from copy import deepcopy
 import numpy as np
+from scipy.misc import imresize
 from PIL import Image
 
 from deeprl_hw2 import utils
@@ -22,20 +24,29 @@ class HistoryPreprocessor(Preprocessor):
       Number of previous states to prepend to state being processed.
 
     """
-
     def __init__(self, history_length=1):
-        pass
+        self.history_length = history_length
+        self.buf = []
 
     def process_state_for_network(self, state):
         """You only want history when you're deciding the current action to take."""
-        pass
+        if len(self.buf) < self.history_length:
+            n = self.history_length - len(self.buf)
+            buf_old = deepcopy(self.buf)
+            self.buf.append(state)
+            return [np.zero(state.shape) for _ in range(n)] + buf_old
+        else: # buf full
+            buf_old = deepcopy(self.buf)
+            self.buf.pop(0)
+            self.buf.append(state)
+            return buf_old
 
     def reset(self):
         """Reset the history sequence.
 
         Useful when you start a new episode.
         """
-        pass
+        self.buf = []
 
     def get_config(self):
         return {'history_length': self.history_length}
@@ -76,9 +87,8 @@ class AtariPreprocessor(Preprocessor):
       The size that each image in the state should be scaled to. e.g
       (84, 84) will make each image in the output have shape (84, 84).
     """
-
     def __init__(self, new_size):
-        pass
+        self.new_size = new_size
 
     def process_state_for_memory(self, state):
         """Scale, convert to greyscale and store as uint8.
@@ -90,7 +100,9 @@ class AtariPreprocessor(Preprocessor):
         We recommend using the Python Image Library (PIL) to do the
         image conversions.
         """
-        pass
+        grey = self.convert_greyscale(state)
+        grey_down = self.down_sample(grey)
+        return grey_down.astype(np.uint8)
 
     def process_state_for_network(self, state):
         """Scale, convert to greyscale and store as float32.
@@ -98,7 +110,9 @@ class AtariPreprocessor(Preprocessor):
         Basically same as process state for memory, but this time
         outputs float32 images.
         """
-        pass
+        grey = self.convert_greyscale(state)
+        grey_down = self.down_sample(grey)
+        return grey_down.astype(np.float32)
 
     def process_batch(self, samples):
         """The batches from replay memory will be uint8, convert to float32.
@@ -107,11 +121,24 @@ class AtariPreprocessor(Preprocessor):
         samples from the replay memory. Meaning you need to convert
         both state and next state values.
         """
-        pass
+        processed_samples = deepcopy(samples)
+        for i in range(len(samples)):
+            processed_samples[i].state = process_state_for_network(samples[i].state)
+        return processed_samples
 
     def process_reward(self, reward):
         """Clip reward between -1 and 1."""
-        pass
+        return min(max(reward, -1), 1)
+
+    def down_sample(self, state):
+        return imresize(state, self.new_size)
+
+    def convert_greyscale(self, color_mat):
+        dtype = color_mat.dtype
+        color_img = Image.fromarray(color_mat)
+        grey_img = color_img.convert('L')
+        grey_mat = np.fromstring(grey_img.tobytes(), dtype).reshape(color_mat.shape[:2])
+        return grey_mat
 
 
 class PreprocessorSequence(Preprocessor):
@@ -128,4 +155,11 @@ class PreprocessorSequence(Preprocessor):
     return history.process_state_for_network(state)
     """
     def __init__(self, preprocessors):
-        pass
+        self.preprocessors = preprocessors
+
+    def process_state_for_network(self, state):
+        # MUST FOLLOW THIS
+        for atari_proc in self.preprocessors[:-1]:
+            state = atari_proc.process_state_for_network(state)
+        hist_proc = self.preprocessors[-1]
+        return hist_proc.process_state_for_network(state)

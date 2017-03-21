@@ -1,10 +1,11 @@
 """Loss functions."""
 
-import tensorflow as tf
+# import tensorflow as tf
+from keras import backend as K
 import semver
 
 
-def huber_loss(y_true, y_pred, max_grad=1.):
+def huber_loss(y_true, y_pred):
     """Calculate the huber loss.
 
     See https://en.wikipedia.org/wiki/Huber_loss
@@ -24,10 +25,12 @@ def huber_loss(y_true, y_pred, max_grad=1.):
     tf.Tensor
       The huber loss.
     """
-    pass
+    loss1 = 0.5 * K.square(y_pred - y_true)
+    loss2 = K.abs(y_pred - y_true) - 0.5
+    return K.minimum(loss1, loss2)
 
 
-def mean_huber_loss(y_true, y_pred, max_grad=1.):
+def mean_huber_loss(y_true, y_pred):
     """Return mean huber loss.
 
     Same as huber_loss, but takes the mean over all values in the
@@ -48,4 +51,4 @@ def mean_huber_loss(y_true, y_pred, max_grad=1.):
     tf.Tensor
       The mean huber loss.
     """
-    pass
+    return K.mean(huber_loss(y_true, y_pred), axis=-1)

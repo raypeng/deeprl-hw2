@@ -4,6 +4,7 @@ We have provided you with a base policy class, some example
 implementations and some unimplemented classes that should be useful
 in your code.
 """
+import random
 import numpy as np
 import attr
 
@@ -20,7 +21,6 @@ class Policy:
     an epsilon greedy policy then with some probability epsilon, a
     random action will be chosen.
     """
-
     def select_action(self, **kwargs):
         """Used by agents to select actions.
 
@@ -48,7 +48,6 @@ class UniformRandomPolicy(Policy):
     ValueError:
       If num_actions <= 0
     """
-
     def __init__(self, num_actions):
         assert num_actions >= 1
         self.num_actions = num_actions
@@ -74,7 +73,6 @@ class GreedyPolicy(Policy):
 
     This is a pure exploitation policy.
     """
-
     def select_action(self, q_values, **kwargs):  # noqa: D102
         return np.argmax(q_values)
 
@@ -92,7 +90,7 @@ class GreedyEpsilonPolicy(Policy):
      over time.
     """
     def __init__(self, epsilon):
-        pass
+        self.epsilon = epsilon
 
     def select_action(self, q_values, **kwargs):
         """Run Greedy-Epsilon for the given Q-values.
@@ -108,8 +106,11 @@ class GreedyEpsilonPolicy(Policy):
         int:
           The action index chosen.
         """
-
-    pass
+        if random.random() < self.epsilon:
+            num_actions = len(q_values)
+            return np.random.randint(0, num_actions)
+        else:
+            return np.argmax(q_values)
 
 
 class LinearDecayGreedyEpsilonPolicy(Policy):
@@ -128,12 +129,17 @@ class LinearDecayGreedyEpsilonPolicy(Policy):
       The number of steps over which to decay the value.
 
     """
-
     def __init__(self, policy, attr_name, start_value, end_value,
                  num_steps):  # noqa: D102
-        pass
+        self.policy = policy
+        self.attr_name = attr_name
+        self.start_value = start_value
+        self.end_value = end_value
+        self.num_steps = num_steps
+        self.epsilon = start_value
+        self.decay = (start_value - end_value) * 1. / num_steps
 
-    def select_action(self, **kwargs):
+    def select_action(self, q_values, **kwargs):
         """Decay parameter and select action.
 
         Parameters
@@ -148,8 +154,16 @@ class LinearDecayGreedyEpsilonPolicy(Policy):
         Any:
           Selected action.
         """
-        pass
+        to_decay = kwargs.get('is_training', True)
+        if to_decay and self.num_steps > 0:
+            self.epsilon -= self.decay
+            self.num_steps -= 1
+        if random.random() < self.epsilon:
+            num_actions = len(q_values)
+            return np.random.randint(0, num_actions)
+        else:
+            return np.argmax(q_values)
 
     def reset(self):
         """Start the decay over at the start value."""
-        pass
+        self.epsilon = self.start_value
