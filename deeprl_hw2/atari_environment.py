@@ -21,13 +21,23 @@ class AtariEnv:
         return utils.preprocess_frame(screen), reward, is_teriminal
 
     def step(self, action):
+        states = []
         for _ in range(self.n_action_repeat):
             screen, reward, is_terminal, _ = self.env.step(action)
             current_lives = self.env.ale.lives()
             is_terminal = self.lives > current_lives
+            states.append(utils.preprocess_frame(screen))
             if is_terminal:
                 break
         if not is_terminal:
             self.lives = current_lives
         reward = max(-1, min(1, reward))
-        return utils.preprocess_frame(screen), reward, is_terminal
+        return self._dstack(states), reward, is_terminal
+
+    def _dstack(self, states):
+        assert len(states) == self.n_action_repeat
+        state = states[0]
+        for s in states[1:]:
+            state = np.dstack((state, s))
+        assert state.shape == (self.state_dim, self.state_dim, self.n_action_repeat)
+        return state

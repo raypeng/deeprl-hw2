@@ -43,11 +43,11 @@ def train():
                 D.append(state, action, reward, next_state, is_terminal)
                 if t > batch_size: # train only if we have at least batch_size samples in D
                     samples = D.sample(batch_size)
-                    _train_on_samples(model, samples)
+                    loss = _train_on_samples(model, samples)
                     train_counter += 1
             else: # on-policy
                 samples = [state, action, reward, next_state, is_terminal]
-                _train_on_samples(model, samples)
+                loss = _train_on_samples(model, samples)
                 train_counter += 1
             if train_counter % target_reset_freq == 0:
                 model.resetTarget()
