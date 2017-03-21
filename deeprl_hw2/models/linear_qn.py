@@ -18,7 +18,7 @@ NUM_ACTIONS = 3
 MODEL_DIR = 'linear/no_replay'
 
 class LinearQN:
-    def __init__(self,withReplay=False):
+    def __init__(self,fixTarget=False):
         # init some parameters
         self.stepCount = 0
         self.epsilon = EPSILON
@@ -30,6 +30,7 @@ class LinearQN:
         self.maxIter = NUM_ITERS
         self.memorySize = REPLAY_MEMORY
         self.actionNum = NUM_ACTIONS
+        self.hasTarget = fixTarget
         
         # Build model here
         self.buildModel()
@@ -44,18 +45,27 @@ class LinearQN:
             print "Successfully loaded:", checkpoint.model_checkpoint_path
         else:
             print "Could not find old network weights"
-
+        
+        if self.hasTarget:
+            self.targetW = tf.identity(self.W_fc1)
+            self.targetB = tf.identity(self.b_fc1)
+    
+    # Use target network to forward
+    def forwardTarget(self,state_input):
+        q_vec = tf.matmul(state_input, self.targetW)+targetB
+        q_val = tf.reduce_max(q_vec,axis=1)
+        return q_val
+        
     # map state to Q-value vector
     def forward(self,state_input,action_input=None):
         # network input
         with tf.name_scope('fc1'):
-            W_fc1 = self.weight_variable([self.inputH,self.inputW,self.stateFrames,self.actionNum])
-            W_fc1 = tf.Variable(tf.truncated_normal([self.inputH,self.inputW,self.stateFrames,self.actionNum]),
+            self.W_fc1 = tf.Variable(tf.truncated_normal([self.inputH,self.inputW,self.stateFrames,self.actionNum]),
                                 stddev=0.01,
                                 name='weights')
-            b_fc1 = tf.Variable(tf.zeros([self.actionNum]),
+            self.b_fc1 = tf.Variable(tf.zeros([self.actionNum]),
                                 name='biases')
-            q_vec = tf.matmul(state_input, W_fc1)+b_fc1
+            q_vec = tf.matmul(state_input, self.W_fc1)+self.b_fc1
         # Get q value
         if action_input is None:
             q_val = tf.reduce_max(q_vec,axis=1)
@@ -97,6 +107,9 @@ class LinearQN:
         self.terminal_input = tf.placeholder(tf.bool,[None])
         
         self.pred_q = self.forward(self.state_input,self.action_input)
-        self.target_q = self.forward(self.nextState_input) + self.reward_input
+        if self.hasTarget:
+            self.target_q = self.forwardTarget(self.nextState_input) + self.reward_input
+        else:
+            self.target_q = self.forward(self.nextState_input) + self.reward_input
         self.batch_loss = self.loss(self.pred_q,self.target_q)
     
