@@ -21,6 +21,9 @@ initial_buffer = 50000
 target_reset_freq = 10000
 model_save_freq = 100000
 
+eval_freq = 10000
+eval_num_episode = 20
+
 # Create environent and model
 env_name = 'SpaceInvaders-v0'
 do_render = True
@@ -32,20 +35,52 @@ sample_from_replay = True # False for Q2
 if sample_from_replay:
     D = ReplayMemory(replay_size)
 
+
+def evaluate(epsilon):
+    sess = model.session
+    rewards, steps = [], []
+    for ep in range(eval_num_episode):
+        state, _, is_terminal = env.new_game()
+        accum_reward = 0.
+        step = 0
+        while not is_terminal:
+            if random.random() < epsilon: # uniform_random
+                action = env.random_action()
+            else: # get action from qn
+                action = sess.run(model.next_action, {
+                    model.curr_state: state / 255.
+                })[0]
+            next_state, reward, is_terminal = env.step(action)
+            step += 1
+            accum_reward += reward
+        rewards.append(accum_reward)
+        steps.append(step)
+        print '[eval][{0}/{1}] accum_reward: {2} after {3} steps'.format(ep+1, eval_num_episode, accum_reward, step)
+    avg_reward = sum(rewards) / eval_num_episode
+    avg_step = sum(steps) / eval_num_episode
+    print '\033[0;31m[eval][eps={0}]\033[0m average_reward: {1} average_step: {2}'.format(epsilon, avg_reward, avg_step)
+
+
 def train():
     sess = model.session
     train_counter = 0
     ep = 0
     epsilon = epsilon_init
-    while train_counter<n_train:
+    next_eval_iter = eval_freq
+    while train_counter < n_train:
         # Within an episode
         episode_local_counter = 0
-        state, _, _ = env.new_game()
-        
         step_time = 0.
         total_loss = 0.
         accum_reward = 0
-        
+
+        if train_counter > next_eval_iter:
+            next_eval_iter += eval_freq
+            for eps in [epsilon, 0]:
+                print 'running eval after train_iter', train_counter, 'with epsilon =', eps
+                evaluate(eps)
+
+        state, _, _ = env.new_game()
         while True:
             _tt = time.time()
             # Add to memory only
@@ -62,11 +97,9 @@ def train():
             if random.random() < epsilon: # uniform_random
                 action = env.random_action()
             else: # get action from qn
-                _t = time.time()
                 action = sess.run(model.next_action, {
                     model.curr_state: state / 255.
                 })[0]
-                # print 'model.next_action', time.time() - _t
             next_state, reward, is_terminal = env.step(action)
             
             if is_terminal:
@@ -83,7 +116,6 @@ def train():
             else: # on-policy
                 samples = [Sample(state, action, reward, next_state, is_terminal)]
                 loss = _train_on_samples(model, samples)
-            # print 'each step', time.time() - _tt
 
             step_time += time.time()-_tt
             total_loss += loss
@@ -95,15 +127,14 @@ def train():
                 model.saveModel()
         
         if episode_local_counter == 0:
-            print 'current buffer size: %d' % len(D)
+            print '[buffer] current buffer size: %d' % len(D)
         else:
             ep += 1
-            print 'episode {0}:\t {1} steps, accum_reward: {2}, loss: {3}'.format(ep, episode_local_counter, accum_reward, total_loss/episode_local_counter)
+            print '[train][{0}] episode {1}: {2} steps, accum_reward: {3}, loss: {4}'.format(train_counter, ep, episode_local_counter, accum_reward, total_loss/episode_local_counter)
             print '===== average step_time: %f'%(step_time/episode_local_counter)
-            print '===== total iter: {0}'.format(train_counter)
+
 
 def _train_on_samples(model, samples):
-    _t = time.time()
     sess = model.session
     state_list = np.array([s.state for s in samples]).astype(np.float32) / 255.
     action_list = np.array([[s.action] for s in samples])
@@ -118,7 +149,6 @@ def _train_on_samples(model, samples):
         model.nextState_input: next_state_list,
         model.terminal_input: is_terminal_list
     })
-    # print '_train_on_samples', time.time() - _t
     return loss
 
 train()
