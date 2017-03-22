@@ -1,6 +1,9 @@
 import tensorflow as tf 
 import numpy as np 
+
 import random
+import os
+from datetime import datetime
 from collections import deque 
 
 # Hyper Parameters:
@@ -15,8 +18,9 @@ UPDATE_TIME = 10000 # target q-network reset interval
 W = 84
 H = 84
 NUM_ACTIONS = 3
-MODEL_PATH = "linear_new/linear_replay"
-MODEL_DIR = "linear_new"
+DT = datetime.now().strftime('%m-%d-%H:%M:%S')
+MODEL_DIR = "linear_qn"
+
 
 class LinearQN:
     def __init__(self,fixTarget=False,doubleNetwork=False):
@@ -132,5 +136,8 @@ class LinearQN:
         self.train_op = self.optimizer.minimize(self.batch_loss, global_step=self.global_step)
         
     def saveModel(self):
-        self.saver.save(self.session, MODEL_PATH, global_step=self.global_step)
-        print "Model saved at step %d"%steps
+        if not os.path.exists(MODEL_DIR):
+            os.makedirs(MODEL_DIR)
+        model_path = os.path.join(MODEL_DIR, DT)
+        self.saver.save(self.session, model_path, global_step=self.global_step)
+        print "Model saved to", model_path

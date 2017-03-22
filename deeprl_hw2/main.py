@@ -17,9 +17,9 @@ batch_size = 32
 # Training periods
 n_train = 5000000
 replay_size = 1000000
-initial_buffer = 500
+initial_buffer = 50000
 target_reset_freq = 10000
-model_save_freq = 100000
+model_save_freq = 1000
 
 # Create environent and model
 env_name = 'SpaceInvaders-v0'
