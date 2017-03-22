@@ -118,6 +118,7 @@ class LinearQN:
                 self.target_q = self.forwardTarget(self.nextState_input,isActive_input=self.isActive_input)*self.gamma + self.reward_input
             else:
                 self.target_q = self.forward(self.nextState_input,isActive_input=self.isActive_input)*self.gamma + self.reward_input
+            self.getLoss()
             # self.batch_loss = self.getLoss()
             
             # Create the gradient descent optimizer with the given learning rate.
