@@ -89,19 +89,15 @@ class LinearQN:
             
         return q_val
     
-    def getLoss(self, pred_vals, target_vals):
+    def getLoss(self):
         # Use huber loss for more robust performance
-        delta = target_vals - pred_vals 
+        delta = self.pred_q - self.target_q 
         clipped_error = tf.where(tf.abs(delta) < 1.0,
                                  0.5 * tf.square(delta),
                                  tf.abs(delta) - 0.5, name='clipped_error')
 
-        loss = tf.reduce_mean(clipped_error, name='loss')
-        return loss
+        self.batch_loss = tf.reduce_mean(clipped_error, name='loss')
     
-    def getAction(self):
-        return self.action
-        
     def buildModel(self):
         with tf.device('/gpu:0'):
             self.curr_state = tf.placeholder(tf.float32,[self.inputH, self.inputW, self.stateFrames])
@@ -115,14 +111,14 @@ class LinearQN:
             # 1.0 if a terminal state is found
             self.terminal_input = tf.placeholder(tf.float32,[None, 1])
             
-            isActive_input = tf.ones(tf.shape(self.terminal_input),dtype=tf.float32)-self.terminal_input
+            self.isActive_input = tf.ones(tf.shape(self.terminal_input),dtype=tf.float32)-self.terminal_input
             
             self.pred_q = self.forward(self.state_input,action_input=self.action_input)
             if self.hasTarget:
-                self.target_q = self.forwardTarget(self.nextState_input,isActive_input=isActive_input)*self.gamma + self.reward_input
+                self.target_q = self.forwardTarget(self.nextState_input,isActive_input=self.isActive_input)*self.gamma + self.reward_input
             else:
-                self.target_q = self.forward(self.nextState_input,isActive_input=isActive_input)*self.gamma + self.reward_input
-            self.batch_loss = self.getLoss(self.pred_q,self.target_q)
+                self.target_q = self.forward(self.nextState_input,isActive_input=self.isActive_input)*self.gamma + self.reward_input
+            # self.batch_loss = self.getLoss()
             
             # Create the gradient descent optimizer with the given learning rate.
             self.optimizer = tf.train.GradientDescentOptimizer(self.learningRate)
