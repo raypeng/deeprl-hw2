@@ -31,6 +31,7 @@ class LinearQN:
         self.memorySize = REPLAY_MEMORY
         self.actionNum = NUM_ACTIONS
         self.hasTarget = fixTarget
+        self.stateDim = self.inputH*self.inputW*self.stateFrames
         
         # Build model here
         self.W_fc1, self.b_fc1 = self.createNetwork()
@@ -51,7 +52,7 @@ class LinearQN:
 
     def createNetwork(self):
         # network input
-        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH,self.inputW,self.stateFrames,self.actionNum]),
+        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH*self.inputW*self.stateFrames,self.actionNum]),
                             stddev=0.01,
                             name='weights')
         b_fc1 = tf.Variable(tf.zeros([self.actionNum]),
@@ -65,14 +66,14 @@ class LinearQN:
             
     # Use target network to forward
     def forwardTarget(self,state_input,isActive_input):
-        q_vec = tf.matmul(state_input, self.targetW)+targetB
+        q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.targetW)+targetB
         q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),isActive_input)
         return q_val
         
     # map state to Q-value vector
     def forward(self,state_input,action_input=None,isActive_input=None):
         # Get q value
-        q_vec = tf.matmul(state_input, self.W_fc1)+self.b_fc1
+        q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
         if isActive_input is not None:
             q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),isActive_input)
             # No backprop
@@ -97,7 +98,7 @@ class LinearQN:
     
     def getAction(self):
         self.single_state_input = tf.placeholder(tf.float64,[self.inputH, self.inputW, self.stateFrames])
-        q_vec = tf.matmul(self.single_state_input, self.W_fc1)+self.b_fc1
+        q_vec = tf.matmul(tf.reshape(self.single_state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
         action = tf.argmax(q_vec, axis=1)
         return action
         
