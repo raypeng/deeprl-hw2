@@ -18,9 +18,9 @@ M = 200
 
 env_name = 'SpaceInvaders-v0'
 env = AtariEnv(env_name)
-model = LinearQN()
+model = LinearQN(False)
 
-sample_from_replay = True # False for Q2
+sample_from_replay = False # False for Q2
 if sample_from_replay:
     D = ReplayMemory(replay_size)
 
@@ -38,12 +38,10 @@ def train():
                 action = env.random_action()
             else: # get action from qn
                 _t = time.time()
-                action_tensor = model.getAction()
-                print 'getAction', time.time() - _t
-                action = sess.run(action_tensor, {
-                    model.single_state_input: state / 255.
+                action = sess.run(model.next_action, {
+                    model.curr_state: state / 255.
                 })[0]
-                print 'run action_tensor', time.time() - _t
+                print 'model.next_action', time.time() - _t
             next_state, reward, is_terminal = env.step(action)
             if is_terminal:
                 break
