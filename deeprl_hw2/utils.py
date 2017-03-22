@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 
 def preprocess_frame(input_frame, output_size=84):

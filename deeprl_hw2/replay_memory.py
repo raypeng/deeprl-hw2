@@ -11,7 +11,7 @@ class Sample:
 
 
 class ReplayMemory:
-    def __init__(self, max_size, window_length):
+    def __init__(self, max_size):
         self.max_size = max_size
         self.buf = [None for _ in range(self.max_size)]
         self.curr_size = 0
