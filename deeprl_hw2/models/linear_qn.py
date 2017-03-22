@@ -53,7 +53,7 @@ class LinearQN:
 
     def createNetwork(self):
         # network input
-        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH,self.inputW,self.stateFrames,self.actionNum],stddev=0.01),
+        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH*self.inputW*self.stateFrames,self.actionNum],stddev=0.01),
                             name='weights')
         b_fc1 = tf.Variable(tf.zeros([self.actionNum]),
                             name='biases')
@@ -67,7 +67,7 @@ class LinearQN:
     # Use target network to forward
     def forwardTarget(self,state_input,isActive_input):
         q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.targetW)+targetB
-        q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),isActive_input)
+        q_val = tf.multiply(tf.reduce_max(q_vec,axis=1,keep_dims=True),isActive_input)
         return q_val
         
     # map state to Q-value vector
@@ -75,12 +75,12 @@ class LinearQN:
         # Get q value
         q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
         if isActive_input is not None:
-            q_val = tf.multiply(tf.reduce_max(q_vec,axis=1),isActive_input)
+            q_val = tf.multiply(tf.reduce_max(q_vec,axis=1,keep_dims=True),isActive_input)
             # No backprop
             q_val = tf.stop_gradient(q_val)
         elif action_input is not None:
             actions = tf.one_hot(action_input, self.actionNum, dtype=np.float32) 
-            q_val = tf.reduce_sum(tf.multiply(q_vec,actions),axis=1)
+            q_val = tf.reduce_sum(tf.multiply(q_vec,actions),axis=1,keep_dims=True)
         else:
             raise Exception("Either action or terminal must be provided")
             
@@ -97,18 +97,18 @@ class LinearQN:
         return loss
     
     def getAction(self):
-        self.single_state_input = tf.placeholder(tf.float64,[self.inputH, self.inputW, self.stateFrames])
+        self.single_state_input = tf.placeholder(tf.float32,[self.inputH, self.inputW, self.stateFrames])
         q_vec = tf.matmul(tf.reshape(self.single_state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
         action = tf.argmax(q_vec, axis=1)
         return action
         
     def buildModel(self):
         self.state_input = tf.placeholder(tf.float32,[None, self.inputH, self.inputW, self.stateFrames])
-        self.action_input = tf.placeholder(tf.int32,[None])
-        self.reward_input = tf.placeholder(tf.float32,[None])
+        self.action_input = tf.placeholder(tf.int32,[None, 1])
+        self.reward_input = tf.placeholder(tf.float32,[None, 1])
         self.nextState_input = tf.placeholder(tf.float32,[None, self.inputH, self.inputW, self.stateFrames])
         # 1.0 if a terminal state is found
-        self.terminal_input = tf.placeholder(tf.float32,[None])
+        self.terminal_input = tf.placeholder(tf.float32,[None, 1])
         
         isActive_input = tf.ones(tf.shape(self.terminal_input),dtype=tf.float32)-self.terminal_input
         

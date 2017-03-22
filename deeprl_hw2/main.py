@@ -29,40 +29,42 @@ def train():
     sess = model.session
     train_counter = 0
     for ep in range(M):
+        accum_reward = 0
         state, _, _ = env.new_game()
-        print state.shape
         while True:
             if random.random() < epsilon: # uniform_random
                 action = env.random_action()
             else: # get action from qn
                 action_tensor = model.getAction()
-                action = sess.run([action_tensor], {
+                action = sess.run(action_tensor, {
                     model.single_state_input: state
-                })
+                })[0]
             next_state, reward, is_terminal = env.step(action)
             if is_terminal:
                 break
+            train_counter += 1
+            loss = None
+            accum_reward += reward
             if sample_from_replay: # sample minibatch from D
                 D.append(state, action, reward, next_state, is_terminal)
-                if t > batch_size: # train only if we have at least batch_size samples in D
+                if train_counter > batch_size: # train only if we have at least batch_size samples in D
                     samples = D.sample(batch_size)
                     loss = _train_on_samples(model, samples)
-                    train_counter += 1
             else: # on-policy
                 samples = [state, action, reward, next_state, is_terminal]
                 loss = _train_on_samples(model, samples)
-                train_counter += 1
             if train_counter % target_reset_freq == 0:
                 model.resetTarget()
+        print train_counter, accum_reward
 
 def _train_on_samples(model, samples):
     sess = model.session
     state_list = np.array([s.state for s in samples])
-    action_list = np.array([s.action for s in samples])
-    reward_list = np.array([s.reward for s in samples])
+    action_list = np.array([[s.action] for s in samples])
+    reward_list = np.array([[s.reward] for s in samples])
     next_state_list = np.array([s.next_state for s in samples])
-    is_terminal_list = np.array([s.is_terminal for s in samples]) + 0. # True -> 1
-    _, loss = sess.run([model.train_op, model.loss], {
+    is_terminal_list = np.array([[s.is_terminal] for s in samples]) + 0. # True -> 1
+    _, loss = sess.run([model.train_op, model.batch_loss], {
         model.state_input: state_list,
         model.action_input: action_list,
         model.reward_input: reward_list,

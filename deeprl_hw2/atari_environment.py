@@ -38,6 +38,8 @@ class AtariEnv:
         return self._dstack(states), reward, is_terminal
 
     def _dstack(self, states):
+        if len(states) < self.n_action_repeat:
+            states += [states[-1] for _ in range(self.n_action_repeat - len(states))]
         assert len(states) == self.n_action_repeat
         state = states[0]
         for s in states[1:]:
