@@ -41,14 +41,16 @@ class LinearQN:
         
         # Start a session and load the model
         self.saver = tf.train.Saver()
-        self.session = tf.InteractiveSession()
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+        self.session = tf.Session(config=config)
         self.session.run(tf.initialize_all_variables())
         checkpoint = tf.train.get_checkpoint_state(MODEL_DIR)
         if checkpoint and checkpoint.model_checkpoint_path:
             self.saver.restore(self.session, checkpoint.model_checkpoint_path)
-            print "Successfully loaded:", checkpoint.model_checkpoint_path
+            print("Successfully loaded:", checkpoint.model_checkpoint_path)
         else:
-            print "Could not find old network weights"
+            print("Could not find old network weights")
         
         self.resetTarget()
 
@@ -98,28 +100,30 @@ class LinearQN:
         return loss
     
     def getAction(self):
-        self.single_state_input = tf.placeholder(tf.float32,[self.inputH, self.inputW, self.stateFrames])
-        q_vec = tf.matmul(tf.reshape(self.single_state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
-        action = tf.argmax(q_vec, axis=1)
+        with tf.device('/gpu:0'):
+            self.single_state_input = tf.placeholder(tf.float32,[self.inputH, self.inputW, self.stateFrames])
+            q_vec = tf.matmul(tf.reshape(self.single_state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
+            action = tf.argmax(q_vec, axis=1)
         return action
         
     def buildModel(self):
-        self.state_input = tf.placeholder(tf.float32,[None, self.inputH, self.inputW, self.stateFrames])
-        self.action_input = tf.placeholder(tf.int32,[None, 1])
-        self.reward_input = tf.placeholder(tf.float32,[None, 1])
-        self.nextState_input = tf.placeholder(tf.float32,[None, self.inputH, self.inputW, self.stateFrames])
-        # 1.0 if a terminal state is found
-        self.terminal_input = tf.placeholder(tf.float32,[None, 1])
-        
-        isActive_input = tf.ones(tf.shape(self.terminal_input),dtype=tf.float32)-self.terminal_input
-        
-        self.pred_q = self.forward(self.state_input,action_input=self.action_input)
-        if self.hasTarget:
-            self.target_q = self.forwardTarget(self.nextState_input,isActive_input=isActive_input)*self.gamma + self.reward_input
-        else:
-            self.target_q = self.forward(self.nextState_input,isActive_input=isActive_input)*self.gamma + self.reward_input
-        self.batch_loss = self.getLoss(self.pred_q,self.target_q)
-        
-        # Create the gradient descent optimizer with the given learning rate.
-        self.optimizer = tf.train.GradientDescentOptimizer(self.learningRate)
-        self.train_op = self.optimizer.minimize(self.batch_loss)
+        with tf.device('/gpu:0'):
+            self.state_input = tf.placeholder(tf.float32,[None, self.inputH, self.inputW, self.stateFrames])
+            self.action_input = tf.placeholder(tf.int32,[None, 1])
+            self.reward_input = tf.placeholder(tf.float32,[None, 1])
+            self.nextState_input = tf.placeholder(tf.float32,[None, self.inputH, self.inputW, self.stateFrames])
+            # 1.0 if a terminal state is found
+            self.terminal_input = tf.placeholder(tf.float32,[None, 1])
+            
+            isActive_input = tf.ones(tf.shape(self.terminal_input),dtype=tf.float32)-self.terminal_input
+            
+            self.pred_q = self.forward(self.state_input,action_input=self.action_input)
+            if self.hasTarget:
+                self.target_q = self.forwardTarget(self.nextState_input,isActive_input=isActive_input)*self.gamma + self.reward_input
+            else:
+                self.target_q = self.forward(self.nextState_input,isActive_input=isActive_input)*self.gamma + self.reward_input
+            self.batch_loss = self.getLoss(self.pred_q,self.target_q)
+            
+            # Create the gradient descent optimizer with the given learning rate.
+            self.optimizer = tf.train.GradientDescentOptimizer(self.learningRate)
+            self.train_op = self.optimizer.minimize(self.batch_loss)
