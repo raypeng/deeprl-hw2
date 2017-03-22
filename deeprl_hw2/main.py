@@ -3,6 +3,8 @@ from replay_memory import ReplayMemory
 from models.linear_qn import LinearQN
 # from deep_q import DeepQ
 
+import numpy as np
+import random
 
 
 gamma = 0.99
@@ -28,11 +30,12 @@ def train():
     train_counter = 0
     for ep in range(M):
         state, _, _ = env.new_game()
-        while true:
+        print state.shape
+        while True:
             if random.random() < epsilon: # uniform_random
                 action = env.random_action()
             else: # get action from qn
-                action_tensor = model.get_action()
+                action_tensor = model.getAction()
                 action = sess.run([action_tensor], {
                     model.single_state_input: state
                 })
@@ -67,3 +70,5 @@ def _train_on_samples(model, samples):
         model.terminal_input: is_terminal_list
     })
     return loss
+
+train()
