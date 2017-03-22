@@ -15,10 +15,11 @@ UPDATE_TIME = 10000 # target q-network reset interval
 W = 84
 H = 84
 NUM_ACTIONS = 3
-MODEL_DIR = 'linear/no_replay'
+MODEL_PATH = "linear_new/linear_replay"
+MODEL_DIR = "linear_new"
 
 class LinearQN:
-    def __init__(self,fixTarget=False):
+    def __init__(self,fixTarget=False,doubleNetwork=False):
         # init some parameters
         self.stepCount = 0
         self.epsilon = EPSILON
@@ -33,16 +34,18 @@ class LinearQN:
         self.memorySize = REPLAY_MEMORY
         self.actionNum = NUM_ACTIONS
         self.hasTarget = fixTarget
+        self.doubleNetwork = doubleNetwork
         self.stateDim = self.inputH*self.inputW*self.stateFrames
         
         # Build model here
         self.W_fc1, self.b_fc1 = self.createNetwork()
+        self.W_target, self.b_target = self.createNetwork()
         self.resetTarget()
         self.buildModel()
         
         # Start a session and load the model
         self.saver = tf.train.Saver()
-        config = tf.ConfigProto(log_device_placement=True)
+        config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         self.session = tf.Session(config=config)
         self.session.run(tf.initialize_all_variables())
@@ -55,26 +58,30 @@ class LinearQN:
 
     def createNetwork(self):
         # network input
-        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH*self.inputW*self.stateFrames,self.actionNum],stddev=0.01),
-                            name='weights')
-        b_fc1 = tf.Variable(tf.zeros([self.actionNum]),
-                            name='biases')
+        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH*self.inputW*self.stateFrames,self.actionNum],stddev=0.01))
+        b_fc1 = tf.Variable(tf.zeros([self.actionNum]))
         return W_fc1, b_fc1
         
     def resetTarget(self):
         if self.hasTarget:
-            self.targetW = tf.identity(self.W_fc1)
-            self.targetB = tf.identity(self.b_fc1)
+            tf.assign(self.W_target, self.W_fc1)
+            tf.assign(self.b_target, self.b_fc1)
+            print("Target network reset")
             
     # Use target network to forward
     def forwardTarget(self,state_input,isActive_input):
-        q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.targetW)+self.targetB
+        if self.doubleNetwork:
+            q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
+        else:
+            q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.W_target)+self.b_target
+        
         q_val = tf.multiply(tf.reduce_max(q_vec,axis=1,keep_dims=True),isActive_input)
         return q_val
     
     def forwardWithAction(self,state_input,action_input):
-        q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
-        actions = tf.one_hot(action_input, self.actionNum, dtype=np.float32) 
+        format_input = tf.reshape(state_input, [-1, self.stateDim])
+        q_vec = tf.matmul(format_input, self.W_fc1)+self.b_fc1
+        actions = tf.one_hot(tf.reshape(action_input, [-1]), self.actionNum, dtype=np.float32) 
         q_val = tf.reduce_sum(tf.multiply(q_vec,actions),axis=1,keep_dims=True)
         return q_val
         
@@ -85,37 +92,20 @@ class LinearQN:
         q_val = tf.stop_gradient(q_val)
         return q_val
     
-    # map state to Q-value vector
-    '''
-    def forward(self,state_input,action_input=None,isActive_input=None):
-        # Get q value
-        q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
-        if isActive_input is not None:
-            q_val = tf.multiply(tf.reduce_max(q_vec,axis=1,keep_dims=True),isActive_input)
-            # No backprop
-            q_val = tf.stop_gradient(q_val)
-        elif action_input is not None:
-            actions = tf.one_hot(action_input, self.actionNum, dtype=np.float32) 
-            q_val = tf.reduce_sum(tf.multiply(q_vec,actions),axis=1,keep_dims=True)
-        else:
-            raise Exception("Either action or terminal must be provided")
-            
-        return q_val
-    '''
-    
     def getLoss(self):
         # Use huber loss for more robust performance
-        delta = self.pred_q - self.target_q 
-        clipped_error = tf.where(tf.abs(delta) < 1.0,
-                                 0.5 * tf.square(delta),
-                                 tf.abs(delta) - 0.5, name='clipped_error')
+        self.delta = self.pred_q - self.target_q 
+        self.delta = tf.where(tf.abs(self.delta) < 1.0,
+                              0.5 * tf.square(self.delta),
+                              tf.abs(self.delta) - 0.5, name='clipped_error')
 
-        self.batch_loss = tf.reduce_mean(clipped_error, name='loss')
+        self.batch_loss = tf.reduce_mean(self.delta, name='loss')
+        #self.batch_loss = tf.reduce_mean(tf.square(self.delta), name='loss')
     
     def buildModel(self):
         self.curr_state = tf.placeholder(tf.float32,[self.inputH, self.inputW, self.stateFrames])
         curr_qvals = tf.matmul(tf.reshape(self.curr_state, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
-        self.next_action = tf.argmax( curr_qvals, axis=1)
+        self.next_action = tf.argmax( curr_qvals, axis=1 )
             
         self.state_input = tf.placeholder(tf.float32,[None, self.inputH, self.inputW, self.stateFrames])
         self.action_input = tf.placeholder(tf.int32,[None, 1])
@@ -127,12 +117,20 @@ class LinearQN:
         self.isActive_input = tf.ones(tf.shape(self.terminal_input),dtype=tf.float32)-self.terminal_input
             
         self.pred_q = self.forwardWithAction(self.state_input,self.action_input)
+        
         if self.hasTarget:
             self.target_q = self.forwardTarget(self.nextState_input,isActive_input=self.isActive_input)*self.gamma + self.reward_input
         else:
             self.target_q = self.forwardWithoutAction(self.nextState_input,self.isActive_input)*self.gamma + self.reward_input
+
         self.getLoss()
-            
+        
+        self.global_step = tf.Variable(0, name='global_step', trainable=False)
         # Create the gradient descent optimizer with the given learning rate.
-        self.optimizer = tf.train.GradientDescentOptimizer(self.learningRate)
-        self.train_op = self.optimizer.minimize(self.batch_loss)
+        # self.optimizer = tf.train.GradientDescentOptimizer(self.learningRate)
+        self.optimizer = tf.train.RMSPropOptimizer(0.00025,decay=0.95, momentum=0.95, epsilon=0.01)
+        self.train_op = self.optimizer.minimize(self.batch_loss, global_step=self.global_step)
+        
+    def saveModel(self):
+        self.saver.save(self.session, MODEL_PATH, global_step=self.global_step)
+        print "Model saved at step %d"%steps
