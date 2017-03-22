@@ -22,7 +22,6 @@ class AtariEnv:
         screen = self.env.reset()
         if self.do_render:
             self.env.render()
-        self.lives = self.env.ale.lives()
         is_terminal = False
         reward = 0
         self.history = deque([utils.preprocess_frame(screen) for _ in range(self.n_frame_input)])
@@ -32,12 +31,8 @@ class AtariEnv:
         screen, reward, is_terminal, _ = self.env.step(action)
         if self.do_render:
             self.env.render()
-        current_lives = self.env.ale.lives()
-        is_terminal = self.lives > current_lives
         self.history.append(utils.preprocess_frame(screen))
         self.history.popleft()
-        if not is_terminal:
-            self.lives = current_lives
         reward = max(-1, min(1, reward))
         return self._dstack(self.history), reward, is_terminal
 

@@ -17,14 +17,14 @@ batch_size = 32
 # Training periods
 n_train = 5000000
 replay_size = 1000000
-initial_buffer = 50000
+initial_buffer = 500
 target_reset_freq = 10000
 model_save_freq = 100000
 
 # Create environent and model
 env_name = 'SpaceInvaders-v0'
-do_render = False
-fix_target = False
+do_render = True
+fix_target = True
 env = AtariEnv(env_name, do_render=do_render)
 model = LinearQN(fixTarget=fix_target)
 
