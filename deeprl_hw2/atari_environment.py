@@ -3,46 +3,49 @@ import utils
 
 import numpy as np
 import random
+from collections import deque
 
 
 class AtariEnv:
-    def __init__(self, env_name, state_dim=84, n_action_repeat=4):
+    def __init__(self, env_name, do_render=False, state_dim=84, n_frame_input=4):
         self.env = gym.make(env_name)
         self.state_dim = state_dim
-        self.n_action_repeat = n_action_repeat
+        self.n_frame_input = n_frame_input
         self.action_size = self.env.action_space.n
+        self.history = deque()
+        self.do_render = do_render
 
     def random_action(self):
         return self.env.action_space.sample()
 
     def new_game(self):
         screen = self.env.reset()
+        if self.do_render:
+            self.env.render()
         self.lives = self.env.ale.lives()
         is_terminal = False
         reward = 0
-        states = [utils.preprocess_frame(screen) for _ in range(self.n_action_repeat)]
-        return self._dstack(states), reward, is_terminal
+        self.history = deque([utils.preprocess_frame(screen) for _ in range(self.n_frame_input)])
+        return self._dstack(self.history), reward, is_terminal
 
     def step(self, action):
-        states = []
-        for _ in range(self.n_action_repeat):
-            screen, reward, is_terminal, _ = self.env.step(action)
-            current_lives = self.env.ale.lives()
-            is_terminal = self.lives > current_lives
-            states.append(utils.preprocess_frame(screen))
-            if is_terminal:
-                break
+        screen, reward, is_terminal, _ = self.env.step(action)
+        if self.do_render:
+            self.env.render()
+        current_lives = self.env.ale.lives()
+        is_terminal = self.lives > current_lives
+        self.history.append(utils.preprocess_frame(screen))
+        self.history.popleft()
         if not is_terminal:
             self.lives = current_lives
         reward = max(-1, min(1, reward))
-        return self._dstack(states), reward, is_terminal
+        return self._dstack(self.history), reward, is_terminal
 
     def _dstack(self, states):
-        if len(states) < self.n_action_repeat:
-            states += [states[-1] for _ in range(self.n_action_repeat - len(states))]
-        assert len(states) == self.n_action_repeat
-        state = states[0]
-        for s in states[1:]:
+        assert len(states) == self.n_frame_input
+        dim = states[0].shape[0]
+        state = np.array([], dtype=np.float32).reshape(dim, dim, 0)
+        for s in states:
             state = np.dstack((state, s))
-        assert state.shape == (self.state_dim, self.state_dim, self.n_action_repeat), state.shape
+        assert state.shape == (self.state_dim, self.state_dim, self.n_frame_input), state.shape
         return state

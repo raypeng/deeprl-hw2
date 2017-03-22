@@ -17,8 +17,10 @@ batch_size = 32
 M = 200
 
 env_name = 'SpaceInvaders-v0'
-env = AtariEnv(env_name)
-model = LinearQN(False)
+do_render = False
+fix_target = False
+env = AtariEnv(env_name, do_render=do_render)
+model = LinearQN(fixTarget=fix_target)
 
 sample_from_replay = False # False for Q2
 if sample_from_replay:
@@ -41,7 +43,7 @@ def train():
                 action = sess.run(model.next_action, {
                     model.curr_state: state / 255.
                 })[0]
-                print 'model.next_action', time.time() - _t
+                # print 'model.next_action', time.time() - _t
             next_state, reward, is_terminal = env.step(action)
             if is_terminal:
                 break
@@ -56,7 +58,7 @@ def train():
             else: # on-policy
                 samples = [Sample(state, action, reward, next_state, is_terminal)]
                 loss = _train_on_samples(model, samples)
-            print 'each step', time.time() - _tt
+            # print 'each step', time.time() - _tt
             if train_counter % target_reset_freq == 0:
                 model.resetTarget()
         print 'episode {0}:\ttrained for {1} steps, accum_reward: {2}'.format(ep, episode_local_counter, accum_reward)
@@ -77,7 +79,7 @@ def _train_on_samples(model, samples):
         model.nextState_input: next_state_list,
         model.terminal_input: is_terminal_list
     })
-    print '_train_on_samples', time.time() - _t
+    # print '_train_on_samples', time.time() - _t
     return loss
 
 train()
