@@ -1,3 +1,4 @@
+import numpy as np
 import random
 
 
@@ -37,7 +38,7 @@ class ReplayMemory:
         return buf
 
     def append(self, state, action, reward, next_state, is_terminal):
-        s = Sample(state, action, reward, next_state, is_terminal)
+        s = Sample(state.astype(np.uint8), action, reward, next_state.astype(np.uint8), is_terminal)
         self.buf[self.curr_index] = s
         self.curr_index = (self.curr_index + 1) % self.max_size
         self.curr_size = min(self.curr_size + 1, self.max_size)
