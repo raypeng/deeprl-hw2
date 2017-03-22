@@ -2,6 +2,7 @@ from atari_environment import AtariEnv
 from replay_memory import Sample, ReplayMemory
 from models.linear_qn import LinearQN
 
+import time
 import numpy as np
 import random
 
@@ -31,14 +32,18 @@ def train():
         episode_local_counter = 0
         accum_reward = 0
         state, _, _ = env.new_game()
-        while episode_local_counter < 200:
+        while True:
+            _tt = time.time()
             if random.random() < epsilon: # uniform_random
                 action = env.random_action()
             else: # get action from qn
+                _t = time.time()
                 action_tensor = model.getAction()
+                print 'getAction', time.time() - _t
                 action = sess.run(action_tensor, {
                     model.single_state_input: state / 255.
                 })[0]
+                print 'run action_tensor', time.time() - _t
             next_state, reward, is_terminal = env.step(action)
             if is_terminal:
                 break
@@ -53,12 +58,14 @@ def train():
             else: # on-policy
                 samples = [Sample(state, action, reward, next_state, is_terminal)]
                 loss = _train_on_samples(model, samples)
+            print 'each step', time.time() - _tt
             if train_counter % target_reset_freq == 0:
                 model.resetTarget()
         print 'episode {0}:\ttrained for {1} steps, accum_reward: {2}'.format(ep, episode_local_counter, accum_reward)
 
 
 def _train_on_samples(model, samples):
+    _t = time.time()
     sess = model.session
     state_list = np.array([s.state for s in samples]).astype(np.float32) / 255.
     action_list = np.array([[s.action] for s in samples])
@@ -72,6 +79,7 @@ def _train_on_samples(model, samples):
         model.nextState_input: next_state_list,
         model.terminal_input: is_terminal_list
     })
+    print '_train_on_samples', time.time() - _t
     return loss
 
 train()
