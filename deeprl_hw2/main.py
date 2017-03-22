@@ -6,36 +6,59 @@ import time
 import numpy as np
 import random
 
+# Training parameters
+epsilon_init = 1.0
+epsilon_final = 0.01
+epsilon_decay_steps = 1000000
+epsilon_step = (epsilon_final-epsilon_init)/epsilon_decay_steps
 
-gamma = 0.99
-lr = 1e-4
-epsilon = 0.05
+batch_size = 32
+
+# Training periods
 n_train = 5000000
 replay_size = 1000000
+initial_buffer = 50000
 target_reset_freq = 10000
-batch_size = 32
-M = 200
+model_save_freq = 100000
 
+# Create environent and model
 env_name = 'SpaceInvaders-v0'
 do_render = False
 fix_target = False
 env = AtariEnv(env_name, do_render=do_render)
 model = LinearQN(fixTarget=fix_target)
 
-sample_from_replay = False # False for Q2
+sample_from_replay = True # False for Q2
 if sample_from_replay:
     D = ReplayMemory(replay_size)
-
 
 def train():
     sess = model.session
     train_counter = 0
-    for ep in range(M):
+    ep = 0
+    epsilon = epsilon_init
+    while train_counter<n_train:
+        # Within an episode
         episode_local_counter = 0
-        accum_reward = 0
         state, _, _ = env.new_game()
+        
+        step_time = 0.
+        total_loss = 0.
+        accum_reward = 0
+        
         while True:
             _tt = time.time()
+            # Add to memory only
+            if sample_from_replay and len(D) <= initial_buffer:
+                action = env.random_action()
+                next_state, reward, is_terminal = env.step(action)
+                if is_terminal:
+                    break
+                D.append(state, action, reward, next_state, is_terminal)
+                continue
+            
+            epsilon += epsilon_step
+            
             if random.random() < epsilon: # uniform_random
                 action = env.random_action()
             else: # get action from qn
@@ -45,24 +68,38 @@ def train():
                 })[0]
                 # print 'model.next_action', time.time() - _t
             next_state, reward, is_terminal = env.step(action)
+            
             if is_terminal:
                 break
+            
             train_counter += 1
             episode_local_counter += 1
             accum_reward += reward
+            
             if sample_from_replay: # sample minibatch from D
                 D.append(state, action, reward, next_state, is_terminal)
-                if train_counter > batch_size: # train only if we have at least batch_size samples in D
-                    samples = D.sample(batch_size)
-                    loss = _train_on_samples(model, samples)
+                samples = D.sample(batch_size)
+                loss = _train_on_samples(model, samples)
             else: # on-policy
                 samples = [Sample(state, action, reward, next_state, is_terminal)]
                 loss = _train_on_samples(model, samples)
             # print 'each step', time.time() - _tt
+
+            step_time += time.time()-_tt
+            total_loss += loss
+
             if train_counter % target_reset_freq == 0:
                 model.resetTarget()
-        print 'episode {0}:\ttrained for {1} steps, accum_reward: {2}'.format(ep, episode_local_counter, accum_reward)
-
+            
+            if train_counter % model_save_freq == 0:
+                model.saveModel()
+        
+        if episode_local_counter == 0:
+            print 'current buffer size: %d' % len(D)
+        else:
+            ep += 1
+            print 'episode {0}:\ttrained for {1} steps, accum_reward: {2}, loss: {3}'.format(ep, episode_local_counter, accum_reward, total_loss/episode_local_counter)
+            print 'average step_time: %f'%(step_time/episode_local_counter)
 
 def _train_on_samples(model, samples):
     _t = time.time()
@@ -72,6 +109,7 @@ def _train_on_samples(model, samples):
     reward_list = np.array([[s.reward] for s in samples])
     next_state_list = np.array([s.next_state for s in samples]).astype(np.float32) / 255.
     is_terminal_list = np.array([[s.is_terminal] for s in samples]) + 0. # True -> 1
+    
     _, loss = sess.run([model.train_op, model.batch_loss], {
         model.state_input: state_list,
         model.action_input: action_list,
