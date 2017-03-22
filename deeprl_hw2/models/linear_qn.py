@@ -41,7 +41,7 @@ class LinearQN:
         
         # Start a session and load the model
         self.saver = tf.train.Saver()
-        config = tf.ConfigProto()
+        config = tf.ConfigProto(log_device_placement=True)
         config.gpu_options.allow_growth = True
         self.session = tf.Session(config=config)
         self.session.run(tf.initialize_all_variables())
@@ -100,14 +100,14 @@ class LinearQN:
         return loss
     
     def getAction(self):
-        with tf.device('/gpu:0'):
-            self.single_state_input = tf.placeholder(tf.float32,[self.inputH, self.inputW, self.stateFrames])
-            q_vec = tf.matmul(tf.reshape(self.single_state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
-            action = tf.argmax(q_vec, axis=1)
-        return action
+        return self.action
         
     def buildModel(self):
         with tf.device('/gpu:0'):
+            self.curr_state = tf.placeholder(tf.float32,[self.inputH, self.inputW, self.stateFrames])
+            curr_qvals = tf.matmul(tf.reshape(self.curr_state, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
+            self.next_action = tf.argmax( curr_qvals, axis=1)
+            
             self.state_input = tf.placeholder(tf.float32,[None, self.inputH, self.inputW, self.stateFrames])
             self.action_input = tf.placeholder(tf.int32,[None, 1])
             self.reward_input = tf.placeholder(tf.float32,[None, 1])
