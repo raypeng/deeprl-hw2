@@ -19,7 +19,7 @@ n_train = 5000000
 replay_size = 1000000
 initial_buffer = 50000
 target_reset_freq = 10000
-model_save_freq = 1000
+model_save_freq = 100000
 
 # Create environent and model
 env_name = 'SpaceInvaders-v0'
@@ -98,8 +98,9 @@ def train():
             print 'current buffer size: %d' % len(D)
         else:
             ep += 1
-            print 'episode {0}:\ttrained for {1} steps, accum_reward: {2}, loss: {3}'.format(ep, episode_local_counter, accum_reward, total_loss/episode_local_counter)
-            print 'average step_time: %f'%(step_time/episode_local_counter)
+            print 'episode {0}:\t {1} steps, accum_reward: {2}, loss: {3}'.format(ep, episode_local_counter, accum_reward, total_loss/episode_local_counter)
+            print '===== average step_time: %f'%(step_time/episode_local_counter)
+            print '===== total iter: {0}'.format(train_counter)
 
 def _train_on_samples(model, samples):
     _t = time.time()
