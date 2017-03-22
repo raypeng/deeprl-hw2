@@ -71,8 +71,22 @@ class LinearQN:
         q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.targetW)+self.targetB
         q_val = tf.multiply(tf.reduce_max(q_vec,axis=1,keep_dims=True),isActive_input)
         return q_val
+    
+    def forwardWithAction(self,state_input,action_input):
+        q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
+        actions = tf.one_hot(action_input, self.actionNum, dtype=np.float32) 
+        q_val = tf.reduce_sum(tf.multiply(q_vec,actions),axis=1,keep_dims=True)
+        return q_val
         
+    def forwardWithoutAction(self,state_input,isActive_input):
+        q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
+        q_val = tf.multiply(tf.reduce_max(q_vec,axis=1,keep_dims=True),isActive_input)
+        # No backprop
+        q_val = tf.stop_gradient(q_val)
+        return q_val
+    
     # map state to Q-value vector
+    '''
     def forward(self,state_input,action_input=None,isActive_input=None):
         # Get q value
         q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
@@ -87,6 +101,7 @@ class LinearQN:
             raise Exception("Either action or terminal must be provided")
             
         return q_val
+    '''
     
     def getLoss(self):
         # Use huber loss for more robust performance
@@ -111,11 +126,11 @@ class LinearQN:
             
         self.isActive_input = tf.ones(tf.shape(self.terminal_input),dtype=tf.float32)-self.terminal_input
             
-        self.pred_q = self.forward(self.state_input,action_input=self.action_input)
+        self.pred_q = self.forwardWithAction(self.state_input,self.action_input)
         if self.hasTarget:
             self.target_q = self.forwardTarget(self.nextState_input,isActive_input=self.isActive_input)*self.gamma + self.reward_input
         else:
-            self.target_q = self.forward(self.nextState_input,isActive_input=self.isActive_input)*self.gamma + self.reward_input
+            self.target_q = self.forwardWithoutAction(self.nextState_input,self.isActive_input)*self.gamma + self.reward_input
         self.getLoss()
             
         # Create the gradient descent optimizer with the given learning rate.
