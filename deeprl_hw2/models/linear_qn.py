@@ -43,7 +43,7 @@ class LinearQN:
         
         # Build model here
         self.W_fc1, self.b_fc1 = self.createNetwork()
-        self.W_target, self.b_target = self.createNetwork()
+        self.W_target, self.b_target = self.createNetwork(isTrainable=False)
         self.resetTarget()
         self.buildModel()
         
@@ -60,10 +60,10 @@ class LinearQN:
         else:
             print("Could not find old network weights")
 
-    def createNetwork(self):
+    def createNetwork(self,isTrainable=True):
         # network input
-        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH*self.inputW*self.stateFrames,self.actionNum],stddev=0.01))
-        b_fc1 = tf.Variable(tf.zeros([self.actionNum]))
+        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH*self.inputW*self.stateFrames,self.actionNum],stddev=0.01),trainable=isTrainable)
+        b_fc1 = tf.Variable(tf.zeros([self.actionNum]),trainable=isTrainable)
         return W_fc1, b_fc1
         
     def resetTarget(self):
@@ -92,8 +92,6 @@ class LinearQN:
     def forwardWithoutAction(self,state_input,isActive_input):
         q_vec = tf.matmul(tf.reshape(state_input, [-1, self.stateDim]), self.W_fc1)+self.b_fc1
         q_val = tf.multiply(tf.reduce_max(q_vec,axis=1,keep_dims=True),isActive_input)
-        # No backprop
-        q_val = tf.stop_gradient(q_val)
         return q_val
     
     def getLoss(self):
@@ -132,7 +130,8 @@ class LinearQN:
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         # Create the gradient descent optimizer with the given learning rate.
         # self.optimizer = tf.train.GradientDescentOptimizer(self.learningRate)
-        self.optimizer = tf.train.RMSPropOptimizer(0.00025,decay=0.95, momentum=0.95, epsilon=0.01)
+        self.optimizer = tf.train.RMSPropOptimizer(0.00025, decay=0.95, momentum=0.95, epsilon=0.01)
+        self.grads_and_vars = self.optimizer.compute_gradients(self.batch_loss, tf.trainable_variables())
         self.train_op = self.optimizer.minimize(self.batch_loss, global_step=self.global_step)
         
     def saveModel(self):

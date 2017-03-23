@@ -5,7 +5,7 @@ from collections import deque
 
 # Hyper Parameters:
 GAMMA = 0.99 # decay rate of past observations
-LEARNING_RATE = 0.0001
+LEARNING_RATE = 0.00025
 EPSILON = 0.05
 STATE_FRAMES = 4
 NUM_ITERS = 5000000
@@ -91,10 +91,10 @@ class DeepQN:
 
         W_conv2 = self.weight_variable([4,4,32,64],isTrainable)
         b_conv2 = self.bias_variable([64],isTrainable)
-
+        
         W_conv3 = self.weight_variable([3,3,64,64],isTrainable)
         b_conv3 = self.bias_variable([64],isTrainable)
-
+        
         W_fc1 = self.weight_variable([3136,512],isTrainable)
         b_fc1 = self.bias_variable([512],isTrainable)
 
@@ -140,7 +140,7 @@ class DeepQN:
                               0.5 * tf.square(self.delta),
                               tf.abs(self.delta) - 0.5, name='clipped_error')
 
-        self.batch_loss = tf.reduce_mean(self.delta, name='loss')
+        self.batch_loss = tf.reduce_sum(self.delta, name='loss')
     
     def buildModel(self):
         self.curr_state = tf.placeholder(tf.float32,[self.inputH, self.inputW, self.stateFrames])
@@ -161,26 +161,26 @@ class DeepQN:
         if self.doubleNetwork:
             _, next_actions = self.forwardWithoutAction(self.model_active, self.nextState_input,isActive_input=self.isActive_input)
             self.target_q = self.forwardWithAction(self.model_target,self.nextState_input,next_actions)*self.gamma+self.reward_input
-        else:
-            tmp_target_q, _ = self.forwardWithoutAction(self.model_target, self.nextState_input,isActive_input=self.isActive_input)
-            self.target_q = tmp_target_q * self.gamma + self.reward_input
-
+        else:    
+            self.target_q, _ = self.forwardWithoutAction(self.model_target, self.nextState_input,isActive_input=self.isActive_input)
+            self.target_q = self.target_q*self.gamma + self.reward_input
         self.getLoss()
         
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         # Create the gradient descent optimizer with the given learning rate.
-        self.optimizer = tf.train.RMSPropOptimizer(0.00025,decay=0.95, momentum=0.95, epsilon=0.01)
+        self.optimizer = tf.train.RMSPropOptimizer(0.001, momentum=0.95, epsilon=0.01)
+        self.grads_and_vars = self.optimizer.compute_gradients(self.batch_loss, tf.trainable_variables())
         self.train_op = self.optimizer.minimize(self.batch_loss, global_step=self.global_step)
         
     def saveModel(self):
         self.saver.save(self.session, MODEL_PATH, global_step=self.global_step)
     
     def weight_variable(self,shape,isTrainable=True):
-        initial = tf.truncated_normal(shape, stddev = 0.01)
+        initial = tf.truncated_normal(shape, stddev = 0.1)
         return tf.Variable(initial, trainable=isTrainable)
 
     def bias_variable(self,shape,isTrainable=True):
-        initial = tf.constant(0.01, shape = shape)
+        initial = tf.zeros(shape = shape)
         return tf.Variable(initial, trainable=isTrainable)
 
     def conv2d(self,x, W, stride):
