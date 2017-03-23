@@ -1,6 +1,7 @@
 from atari_environment import AtariEnv
 from replay_memory import Sample, ReplayMemory
 from models.linear_qn import LinearQN
+from models.deep_qn import DeepQN
 
 import time
 import numpy as np
@@ -27,13 +28,20 @@ eval_num_episode = 20
 # Create environent and model
 env_name = 'SpaceInvaders-v0'
 do_render = True
-fix_target = True
 env = AtariEnv(env_name, do_render=do_render)
-model = LinearQN(fixTarget=fix_target)
+
+model_name = 'dqn'
+if model_name == 'linear_qn':
+    fix_target = True
+    model = LinearQN(fixTarget=fix_target)
+elif model_name == 'dqn':
+    double_network = False
+    model = DeepQN(doubleNetwork=double_network)
+else:
+    assert False, 'not supported'
 
 sample_from_replay = True # False for Q2
-if sample_from_replay:
-    D = ReplayMemory(replay_size)
+D = ReplayMemory(replay_size)
 
 
 def evaluate(epsilon):
@@ -130,7 +138,7 @@ def train():
             print '[buffer] current buffer size: %d' % len(D)
         else:
             ep += 1
-            print '[train][{0}] episode {1}: {2} steps, accum_reward: {3}, loss: {4}'.format(train_counter, ep, episode_local_counter, accum_reward, total_loss/episode_local_counter)
+            print '[train][{0}] episode {1}: {2} steps, accum_reward: {3}, loss: {4}, epsilon: {5}'.format(train_counter, ep, episode_local_counter, accum_reward, total_loss/episode_local_counter, epsilon)
             print '===== average step_time: %f'%(step_time/episode_local_counter)
 
 
