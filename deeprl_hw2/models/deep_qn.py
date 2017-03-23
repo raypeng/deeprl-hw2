@@ -121,14 +121,11 @@ class DeepQN:
         print("Target network reset")
             
     # Use target network to forward
-    def forwardTarget(self,state_input,isActive_input):
-        if self.doubleNetwork:
-            q_vec = self.networkForward(self.model_active, state_input)
-        else:
-            q_vec = self.networkForward(self.model_target, state_input)
-
+    def forwardWithoutAction(self,model,state_input,isActive_input):
+        q_vec = self.networkForward(model, state_input)
         q_val = tf.multiply(tf.reduce_max(q_vec,axis=1,keep_dims=True),isActive_input)
-        return q_val
+        actions = tf.argmax( q_vec, axis=1 )
+        return q_val, actions
     
     def forwardWithAction(self,model,state_input,action_input):
         q_vec = self.networkForward(model, state_input)
@@ -159,10 +156,13 @@ class DeepQN:
         self.terminal_input = tf.placeholder(tf.float32,[None, 1])
             
         self.isActive_input = tf.ones(tf.shape(self.terminal_input),dtype=tf.float32)-self.terminal_input
-            
-        self.pred_q = self.forwardWithAction(self.model_active,self.state_input,self.action_input)
         
-        self.target_q = self.forwardTarget(self.nextState_input,isActive_input=self.isActive_input)*self.gamma + self.reward_input
+        self.pred_q = self.forwardWithAction(self.model_active,self.state_input,self.action_input)
+        if self.doubleNetwork:
+            _, next_actions = self.forwardWithoutAction(self.model_active, self.nextState_input,isActive_input=self.isActive_input)
+            self.target_q = self.forwardWithAction(self.model_target,self.nextState_input,next_actions)*self.gamma+self.reward_input
+        else:    
+            self.target_q, _ = self.forwardWithoutAction(self.model_target, self.nextState_input,isActive_input=self.isActive_input)*self.gamma + self.reward_input
 
         self.getLoss()
         
