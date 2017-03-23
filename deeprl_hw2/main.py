@@ -103,7 +103,7 @@ def train():
     sess = model.session
     train_counter = sess.run(model.global_step)
     ep = 0
-    epsilon = epsilon_init + epsilon_step*train_counter
+    epsilon = max(epsilon_final, epsilon_init + epsilon_step*train_counter)
     next_eval_iter = eval_freq * (train_counter/eval_freq + 1)
     
     while train_counter < n_train:
