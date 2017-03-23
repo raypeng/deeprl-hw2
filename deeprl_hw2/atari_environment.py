@@ -27,14 +27,17 @@ class AtariEnv:
         self.history = deque([utils.preprocess_frame(screen) for _ in range(self.n_frame_input)])
         return self._dstack(self.history), reward, is_terminal
 
-    def step(self, action):
+    def step(self, action, include_noclip=False):
         screen, reward, is_terminal, _ = self.env.step(action)
         if self.do_render:
             self.env.render()
         self.history.append(utils.preprocess_frame(screen))
         self.history.popleft()
-        reward = max(-1, min(1, reward))
-        return self._dstack(self.history), reward, is_terminal
+        clipped_reward = max(-1, min(1, reward))
+        if include_noclip:
+            return self._dstack(self.history), clipped_reward, is_terminal, reward
+        else:
+            return self._dstack(self.history), reward, is_terminal
 
     def _dstack(self, states):
         assert len(states) == self.n_frame_input

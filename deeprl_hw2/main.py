@@ -64,10 +64,11 @@ D = ReplayMemory(replay_size)
 
 def evaluate(epsilon):
     sess = model.session
-    rewards, steps = [], []
+    rewards, scores, steps = [], [], []
     for ep in range(eval_num_episode):
         state, _, is_terminal = env.new_game()
         accum_reward = 0.
+        total_score = 0.
         step = 0
         while not is_terminal:
             if random.random() < epsilon: # uniform_random
@@ -76,15 +77,18 @@ def evaluate(epsilon):
                 action = sess.run(model.next_action, {
                     model.curr_state: state / 255.
                 })[0]
-            next_state, reward, is_terminal = env.step(action)
+            next_state, reward, is_terminal, score = env.step(action, include_noclip=True)
             step += 1
             accum_reward += reward
+            total_score += score
         rewards.append(accum_reward)
+        scores.append(total_score)
         steps.append(step)
-        print '[eval][{0}/{1}] accum_reward: {2} after {3} steps'.format(ep+1, eval_num_episode, accum_reward, step)
+        print '[eval][{0}/{1}] accum_reward: {2} total_score: {3} after {4} steps'.format(ep+1, eval_num_episode, accum_reward, total_score, step)
     avg_reward = sum(rewards) / eval_num_episode
+    avg_score = sum(scores) / eval_num_episode
     avg_step = sum(steps) / eval_num_episode
-    print '\033[0;31m[eval][eps={0}]\033[0m average_reward: {1} average_step: {2}'.format(epsilon, avg_reward, avg_step)
+    print '\033[0;31m[eval][eps={0}]\033[0m average_reward: {1} average_score: {2} average_step: {3}'.format(epsilon, avg_reward, avg_score, avg_step)
 
 
 def train():
