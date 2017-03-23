@@ -39,7 +39,7 @@ if args.debug:
     eval_freq = 1000
     eval_num_episode = 2
 else:
-    eval_freq = 10000
+    eval_freq = 50000
     eval_num_episode = 20
 
 # Create environent and model
