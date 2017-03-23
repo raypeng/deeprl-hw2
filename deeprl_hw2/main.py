@@ -49,14 +49,13 @@ env = AtariEnv(env_name, do_render=do_render)
 
 model_name = args.model
 if model_name == 'linear_qn':
-    fix_target = True
-    model = LinearQN(fixTarget=fix_target)
+    model = LinearQN(model_dir=model_name, fixTarget=True, doubleNetwork=False)
+elif model_name == 'linear_double_qn':
+    model = LinearQN(model_dir=model_name, fixTarget=True, doubleNetwork=True)
 elif model_name == 'dqn':
-    double_network = False
-    model = DeepQN(doubleNetwork=double_network)
+    model = DeepQN(model_dir=model_name, doubleNetwork=False)
 elif model_name == 'double_dqn':
-    double_network = True
-    model = DeepQN(doubleNetwork=double_network)
+    model = DeepQN(model_dir=model_name, doubleNetwork=True)
 else:
     assert False, 'not supported'
 
