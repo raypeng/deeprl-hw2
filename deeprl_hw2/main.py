@@ -9,6 +9,7 @@ import random
 import argparse
 
 parser = argparse.ArgumentParser('main driver')
+parser.add_argument('--eval', default=False, action='store_true', help='whether to evaluate only')
 parser.add_argument('--debug', default=False, action='store_true', help='whether use debug mode, shrink initial_buffer, eval_freq, eval_num_episode')
 parser.add_argument('--render', default=False, action='store_true', help='whether to render')
 parser.add_argument('--model', required=True, help='choose from [linear_qn, linear_double_qn, dqn, double_dqn, duel')
@@ -90,13 +91,20 @@ def evaluate(epsilon):
     avg_step = sum(steps) / eval_num_episode
     print '\033[0;31m[eval][eps={0}]\033[0m average_reward: {1} average_score: {2} average_step: {3}'.format(epsilon, avg_reward, avg_score, avg_step)
 
-
+def eval_only():
+    sess = model.session
+    train_counter = sess.run(model.global_step)
+    for eps in [1.0, 0.05, 0.00]:
+        print 'running eval after train_iter', train_counter, 'with epsilon =', eps
+        evaluate(eps)
+        
 def train():
     sess = model.session
-    train_counter = 0
+    train_counter = sess.run(model.global_step)
     ep = 0
-    epsilon = epsilon_init
-    next_eval_iter = eval_freq
+    epsilon = epsilon_init + epsilon_step*train_counter
+    next_eval_iter = eval_freq * (train_counter/eval_freq + 1)
+    
     while train_counter < n_train:
         # Within an episode
         episode_local_counter = 0
@@ -122,7 +130,7 @@ def train():
                 D.append(state, action, reward, next_state, is_terminal)
                 continue
             
-            epsilon += epsilon_step
+            epsilon = max(epsilon_final,epsilon+epsilon_step)
             
             if random.random() < epsilon: # uniform_random
                 action = env.random_action()
@@ -181,4 +189,7 @@ def _train_on_samples(model, samples):
     })
     return loss
 
-train()
+if args.eval:
+    eval_only()
+else:
+    train()
