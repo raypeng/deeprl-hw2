@@ -1,7 +1,9 @@
 import tensorflow as tf 
 import numpy as np 
+
 import random
-from collections import deque 
+import os
+from datetime import datetime
 
 # Hyper Parameters:
 GAMMA = 0.99 # decay rate of past observations
@@ -15,8 +17,7 @@ UPDATE_TIME = 10000 # target q-network reset interval
 W = 84
 H = 84
 NUM_ACTIONS = 3
-MODEL_PATH = "dqn/dqn"
-MODEL_DIR = "dqn"
+
 
 class DQNetwork:
     def __init__(self,components):
@@ -46,7 +47,7 @@ class DQNetwork:
         tf.assign(self.b_fc2, m.b_fc2)
 
 class DeepQN:
-    def __init__(self,doubleNetwork=False):
+    def __init__(self,model_dir='dqn',doubleNetwork=False):
         # init some parameters
         self.stepCount = 0
         self.epsilon = EPSILON
@@ -60,6 +61,7 @@ class DeepQN:
         self.maxIter = NUM_ITERS
         self.memorySize = REPLAY_MEMORY
         self.actionNum = NUM_ACTIONS
+        self.model_dir = model_dir
         self.doubleNetwork = doubleNetwork
         self.stateDim = self.inputH*self.inputW*self.stateFrames
         
@@ -76,7 +78,7 @@ class DeepQN:
         config.gpu_options.allow_growth = True
         self.session = tf.Session(config=config)
         self.session.run(tf.initialize_all_variables())
-        checkpoint = tf.train.get_checkpoint_state(MODEL_DIR)
+        checkpoint = tf.train.get_checkpoint_state(self.model_dir)
         if checkpoint and checkpoint.model_checkpoint_path:
             self.saver.restore(self.session, checkpoint.model_checkpoint_path)
             print("Successfully loaded:", checkpoint.model_checkpoint_path)
@@ -173,7 +175,12 @@ class DeepQN:
         self.train_op = self.optimizer.minimize(self.batch_loss, global_step=self.global_step)
         
     def saveModel(self):
-        self.saver.save(self.session, MODEL_PATH, global_step=self.global_step)
+        dt = datetime.now().strftime('%m-%d-%H:%M:%S')
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+        model_path = os.path.join(self.model_dir, dt)
+        self.saver.save(self.session, model_path, global_step=self.global_step)
+        print "Model saved to", model_path
     
     def weight_variable(self,shape,isTrainable=True):
         initial = tf.truncated_normal(shape, stddev = 0.1)
