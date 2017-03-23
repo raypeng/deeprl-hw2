@@ -9,10 +9,11 @@ import random
 import argparse
 
 parser = argparse.ArgumentParser('main driver')
-parser.add_argument('--debug', required=True, type=bool, help='whether use debug mode, shrink initial_buffer, eval_freq, eval_num_episode')
+parser.add_argument('--debug', default=False, action='store_true', help='whether use debug mode, shrink initial_buffer, eval_freq, eval_num_episode')
+parser.add_argument('--render', default=False, action='store_true', help='whether to render')
 parser.add_argument('--model', required=True, help='choose from [linear_qn, linear_double_qn, dqn, double_dqn, duel')
-parser.add_argument('--render', default=False, type=bool, help='whether to render')
 args = parser.parse_args()
+print args
 
 # Training parameters
 epsilon_init = 1.0
