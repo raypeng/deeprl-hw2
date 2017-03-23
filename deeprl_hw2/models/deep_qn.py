@@ -137,7 +137,7 @@ class DeepQN:
         
     def getLoss(self):
         # Use huber loss for more robust performance
-        self.delta = self.pred_q - self.target_q 
+        self.delta = self.target_q - self.pred_q 
         self.delta = tf.where(tf.abs(self.delta) < 1.0,
                               0.5 * tf.square(self.delta),
                               tf.abs(self.delta) - 0.5, name='clipped_error')
