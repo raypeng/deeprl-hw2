@@ -10,6 +10,7 @@ import argparse
 
 parser = argparse.ArgumentParser('main driver')
 parser.add_argument('--eval', default=False, action='store_true', help='whether to evaluate only')
+parser.add_argument('--video', default=False, action='store_true', help='whether to produce video [only use when eval]')
 parser.add_argument('--debug', default=False, action='store_true', help='whether use debug mode, shrink initial_buffer, eval_freq, eval_num_episode')
 parser.add_argument('--render', default=False, action='store_true', help='whether to render')
 parser.add_argument('--model', required=True, help='choose from [linear_qn, linear_double_qn, dqn, double_dqn, duel]')
@@ -28,24 +29,18 @@ batch_size = 32
 n_train = 5000000
 replay_size = 1000000
 target_reset_freq = 10000
+model_save_freq = 100000
 if args.debug:
     initial_buffer = 50
-    model_save_freq = 100
 else:
     initial_buffer = 50000
-    model_save_freq = 100000
 
 if args.debug:
     eval_freq = 1000
     eval_num_episode = 2
 else:
-    eval_freq = 10000
+    eval_freq = 50000
     eval_num_episode = 20
-
-# Create environent and model
-env_name = 'SpaceInvaders-v0'
-do_render = args.render
-env = AtariEnv(env_name, do_render=do_render)
 
 model_name = args.model
 if model_name == 'linear_qn':
@@ -58,6 +53,10 @@ elif model_name == 'double_dqn':
     model = DeepQN(model_dir=model_name, doubleNetwork=True)
 else:
     assert False, 'not supported'
+
+env_name = 'SpaceInvaders-v0'
+do_render = args.render
+env = AtariEnv(env_name, model_name, do_render=do_render)
 
 sample_from_replay = True # False for Q2
 D = ReplayMemory(replay_size)
@@ -91,7 +90,9 @@ def evaluate(epsilon):
     avg_step = sum(steps) / eval_num_episode
     print '\033[0;31m[eval][eps={0}]\033[0m average_reward: {1} average_score: {2} average_step: {3}'.format(epsilon, avg_reward, avg_score, avg_step)
 
-def eval_only():
+def eval_only(make_video):
+    global env
+    env = AtariEnv(env_name, model_name, do_render=do_render, make_video=make_video)
     sess = model.session
     train_counter = sess.run(model.global_step)
     for eps in [1.0, 0.05, 0.00]:
@@ -193,6 +194,6 @@ def _train_on_samples(model, samples):
     return loss
 
 if args.eval:
-    eval_only()
+    eval_only(make_video=args.video)
 else:
     train()

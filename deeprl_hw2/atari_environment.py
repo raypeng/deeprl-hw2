@@ -1,14 +1,25 @@
 import gym
+from gym import wrappers
 import utils
 
-import numpy as np
+import os
 import random
+import numpy as np
+from datetime import datetime
 from collections import deque
 
 
 class AtariEnv:
-    def __init__(self, env_name, do_render=False, state_dim=84, n_frame_input=4):
+    def __init__(self, env_name, model, do_render=False, make_video=False, state_dim=84, n_frame_input=4):
         self.env = gym.make(env_name)
+        if make_video:
+            dt = datetime.now().strftime('%m-%d-%H:%M:%S')
+            monitor_path = os.path.join('monitor', model, dt)
+            every_iter = lambda x: True
+            self.env = wrappers.Monitor(self.env,
+                                        monitor_path,
+                                        video_callable=every_iter,
+                                        write_upon_reset=True)
         self.state_dim = state_dim
         self.n_frame_input = n_frame_input
         self.action_size = self.env.action_space.n
