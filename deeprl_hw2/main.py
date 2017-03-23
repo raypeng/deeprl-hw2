@@ -129,6 +129,7 @@ def train():
                 if is_terminal:
                     break
                 D.append(state, action, reward, next_state, is_terminal)
+                state = next_state
                 continue
             
             epsilon = max(epsilon_final,epsilon+epsilon_step)
@@ -155,6 +156,8 @@ def train():
             else: # on-policy
                 samples = [Sample(state, action, reward, next_state, is_terminal)]
                 loss = _train_on_samples(model, samples)
+
+            state = next_state
 
             step_time += time.time()-_tt
             total_loss += loss
