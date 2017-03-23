@@ -47,7 +47,7 @@ class LinearQN:
         # Start a session and load the model
         self.saver = tf.train.Saver()
         config = tf.ConfigProto()
-        config.gpu_options.allow_growth = True
+        config.gpu_options.allow_growth = False
         self.session = tf.Session(config=config)
         self.session.run(tf.initialize_all_variables())
         checkpoint = tf.train.get_checkpoint_state(self.model_dir)
