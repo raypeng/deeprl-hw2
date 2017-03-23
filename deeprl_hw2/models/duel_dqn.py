@@ -50,7 +50,7 @@ class DuelNetwork:
         tf.assign(self.W_fc_adv, m.W_fc_adv)
         tf.assign(self.b_fc_adv, m.b_fc_adv)
 
-class Duel_DQN:
+class DuelDQN:
     def __init__(self,model_dir='duel_dqn',initStd=0.1,lr=0.00025):
         # init some parameters
         self.stepCount = 0
@@ -61,7 +61,6 @@ class Duel_DQN:
         self.inputW = W
         self.updateTime = UPDATE_TIME
         self.batchSize = BATCH_SIZE
-        self.learningRate = LEARNING_RATE
         self.maxIter = NUM_ITERS
         self.memorySize = REPLAY_MEMORY
         self.actionNum = NUM_ACTIONS

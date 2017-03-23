@@ -19,7 +19,7 @@ H = 84
 NUM_ACTIONS = 3
 
 class LinearQN:
-    def __init__(self,model_dir='linear_qn',fixTarget=False,doubleNetwork=False):
+    def __init__(self,model_dir='linear_qn',fixTarget=False,doubleNetwork=False,lr=0.00025):
         # init some parameters
         self.stepCount = 0
         self.epsilon = EPSILON
@@ -29,7 +29,6 @@ class LinearQN:
         self.inputW = W
         self.updateTime = UPDATE_TIME
         self.batchSize = BATCH_SIZE
-        self.learningRate = LEARNING_RATE
         self.maxIter = NUM_ITERS
         self.memorySize = REPLAY_MEMORY
         self.actionNum = NUM_ACTIONS
@@ -37,6 +36,7 @@ class LinearQN:
         self.model_dir = model_dir
         self.doubleNetwork = doubleNetwork
         self.stateDim = self.inputH*self.inputW*self.stateFrames
+        self.lr = lr
         
         # Build model here
         self.W_fc1, self.b_fc1 = self.createNetwork()
@@ -143,7 +143,7 @@ class LinearQN:
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         # Create the gradient descent optimizer with the given learning rate.
         # self.optimizer = tf.train.GradientDescentOptimizer(self.learningRate)
-        self.optimizer = tf.train.RMSPropOptimizer(0.001, momentum=0.95, epsilon=0.01)
+        self.optimizer = tf.train.RMSPropOptimizer(self.lr, momentum=0.95, epsilon=0.01)
         self.grads_and_vars = self.optimizer.compute_gradients(self.batch_loss, tf.trainable_variables())
         self.train_op = self.optimizer.minimize(self.batch_loss, global_step=self.global_step)
         

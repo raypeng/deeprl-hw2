@@ -47,7 +47,7 @@ class DQNetwork:
         tf.assign(self.b_fc2, m.b_fc2)
 
 class DeepQN:
-    def __init__(self,model_dir='dqn',doubleNetwork=False):
+    def __init__(self,model_dir='dqn',doubleNetwork=False,lr=0.00025):
         # init some parameters
         self.stepCount = 0
         self.epsilon = EPSILON
@@ -57,13 +57,13 @@ class DeepQN:
         self.inputW = W
         self.updateTime = UPDATE_TIME
         self.batchSize = BATCH_SIZE
-        self.learningRate = LEARNING_RATE
         self.maxIter = NUM_ITERS
         self.memorySize = REPLAY_MEMORY
         self.actionNum = NUM_ACTIONS
         self.model_dir = model_dir
         self.doubleNetwork = doubleNetwork
         self.stateDim = self.inputH*self.inputW*self.stateFrames
+        self.lr = lr
         
         # Build model here
         self.model_active = DQNetwork(self.createNetwork())
@@ -170,7 +170,7 @@ class DeepQN:
         
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         # Create the gradient descent optimizer with the given learning rate.
-        self.optimizer = tf.train.RMSPropOptimizer(0.001, momentum=0.95, epsilon=0.01)
+        self.optimizer = tf.train.RMSPropOptimizer(self.lr, momentum=0.95, epsilon=0.01)
         self.grads_and_vars = self.optimizer.compute_gradients(self.batch_loss, tf.trainable_variables())
         self.train_op = self.optimizer.minimize(self.batch_loss, global_step=self.global_step)
         

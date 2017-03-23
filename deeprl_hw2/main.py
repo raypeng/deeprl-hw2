@@ -2,6 +2,7 @@ from atari_environment import AtariEnv
 from replay_memory import Sample, ReplayMemory
 from models.linear_qn import LinearQN
 from models.deep_qn import DeepQN
+from models.duel_dqn import DuelDQN
 
 import time
 import numpy as np
@@ -9,11 +10,12 @@ import random
 import argparse
 
 parser = argparse.ArgumentParser('main driver')
+parser.add_argument('--model', required=True, help='choose from [linear_qn, linear_double_qn, dqn, double_dqn, duel]')
+parser.add_argument('--lr', default=0.00025, type=float, help='specfy learning rate, default=0.00025')
 parser.add_argument('--eval', default=False, action='store_true', help='whether to evaluate only')
 parser.add_argument('--video', default=False, action='store_true', help='whether to produce video [only use when eval]')
 parser.add_argument('--debug', default=False, action='store_true', help='whether use debug mode, shrink initial_buffer, eval_freq, eval_num_episode')
 parser.add_argument('--render', default=False, action='store_true', help='whether to render')
-parser.add_argument('--model', required=True, help='choose from [linear_qn, linear_double_qn, dqn, double_dqn, duel]')
 args = parser.parse_args()
 print args
 
@@ -42,15 +44,19 @@ else:
     eval_freq = 50000
     eval_num_episode = 20
 
+print 'learning rate', args.lr
+
 model_name = args.model
 if model_name == 'linear_qn':
-    model = LinearQN(model_dir=model_name, fixTarget=True, doubleNetwork=False)
+    model = LinearQN(model_dir=model_name, fixTarget=True, doubleNetwork=False, lr=args.lr)
 elif model_name == 'linear_double_qn':
-    model = LinearQN(model_dir=model_name, fixTarget=True, doubleNetwork=True)
+    model = LinearQN(model_dir=model_name, fixTarget=True, doubleNetwork=True, lr=args.lr)
 elif model_name == 'dqn':
-    model = DeepQN(model_dir=model_name, doubleNetwork=False)
+    model = DeepQN(model_dir=model_name, doubleNetwork=False, lr=args.lr)
 elif model_name == 'double_dqn':
-    model = DeepQN(model_dir=model_name, doubleNetwork=True)
+    model = DeepQN(model_dir=model_name, doubleNetwork=True, lr=args.lr)
+elif model_name == 'duel_dqn':
+    model = DuelDQN(model_dir=model_name, lr=args.lr)
 else:
     assert False, 'not supported'
 
