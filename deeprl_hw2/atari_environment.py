@@ -37,7 +37,7 @@ class AtariEnv:
         if include_noclip:
             return self._dstack(self.history), clipped_reward, is_terminal, reward
         else:
-            return self._dstack(self.history), reward, is_terminal
+            return self._dstack(self.history), clipped_reward, is_terminal
 
     def _dstack(self, states):
         assert len(states) == self.n_frame_input
