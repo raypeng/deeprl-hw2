@@ -79,7 +79,7 @@ def evaluate(epsilon):
                 action = sess.run(model.next_action, {
                     model.curr_state: state / 255.
                 })[0]
-            next_state, reward, is_terminal, score = env.step(action, include_noclip=True)
+            state, reward, is_terminal, score = env.step(action, include_noclip=True)
             step += 1
             accum_reward += reward
             total_score += score

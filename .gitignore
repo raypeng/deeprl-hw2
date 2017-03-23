@@ -1,4 +1,6 @@
 *.pyc
 .DS_Store
 DeepRL_Homework_2.egg-info/
+linear_qn/
+dqn/
 *~
