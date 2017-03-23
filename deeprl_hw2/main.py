@@ -11,7 +11,7 @@ import argparse
 parser = argparse.ArgumentParser('main driver')
 parser.add_argument('--debug', default=False, action='store_true', help='whether use debug mode, shrink initial_buffer, eval_freq, eval_num_episode')
 parser.add_argument('--render', default=False, action='store_true', help='whether to render')
-parser.add_argument('--model', required=True, help='choose from [linear_qn, linear_double_qn, dqn, double_dqn, duel')
+parser.add_argument('--model', required=True, help='choose from [linear_qn, linear_double_qn, dqn, double_dqn, duel]')
 args = parser.parse_args()
 print args
 
@@ -26,12 +26,13 @@ batch_size = 32
 # Training periods
 n_train = 5000000
 replay_size = 1000000
+target_reset_freq = 10000
 if args.debug:
     initial_buffer = 50
+    model_save_freq = 100
 else:
     initial_buffer = 50000
-target_reset_freq = 10000
-model_save_freq = 100000
+    model_save_freq = 100000
 
 if args.debug:
     eval_freq = 1000

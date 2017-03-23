@@ -4,7 +4,6 @@ import numpy as np
 import random
 import os
 from datetime import datetime
-from collections import deque 
 
 # Hyper Parameters:
 GAMMA = 0.99 # decay rate of past observations
@@ -18,12 +17,10 @@ UPDATE_TIME = 10000 # target q-network reset interval
 W = 84
 H = 84
 NUM_ACTIONS = 3
-DT = datetime.now().strftime('%m-%d-%H:%M:%S')
-MODEL_DIR = "linear_qn"
 
 
 class LinearQN:
-    def __init__(self,fixTarget=False,doubleNetwork=False):
+    def __init__(self,model_dir='linear_qn',fixTarget=False,doubleNetwork=False):
         # init some parameters
         self.stepCount = 0
         self.epsilon = EPSILON
@@ -38,6 +35,7 @@ class LinearQN:
         self.memorySize = REPLAY_MEMORY
         self.actionNum = NUM_ACTIONS
         self.hasTarget = fixTarget
+        self.model_dir = model_dir
         self.doubleNetwork = doubleNetwork
         self.stateDim = self.inputH*self.inputW*self.stateFrames
         
@@ -53,7 +51,7 @@ class LinearQN:
         config.gpu_options.allow_growth = True
         self.session = tf.Session(config=config)
         self.session.run(tf.initialize_all_variables())
-        checkpoint = tf.train.get_checkpoint_state(MODEL_DIR)
+        checkpoint = tf.train.get_checkpoint_state(self.model_dir)
         if checkpoint and checkpoint.model_checkpoint_path:
             self.saver.restore(self.session, checkpoint.model_checkpoint_path)
             print("Successfully loaded:", checkpoint.model_checkpoint_path)
@@ -135,8 +133,9 @@ class LinearQN:
         self.train_op = self.optimizer.minimize(self.batch_loss, global_step=self.global_step)
         
     def saveModel(self):
-        if not os.path.exists(MODEL_DIR):
-            os.makedirs(MODEL_DIR)
-        model_path = os.path.join(MODEL_DIR, DT)
+        dt = datetime.now().strftime('%m-%d-%H:%M:%S')
+        if not os.path.exists(self.model_dir):
+            os.makedirs(self.model_dir)
+        model_path = os.path.join(self.model_dir, dt)
         self.saver.save(self.session, model_path, global_step=self.global_step)
         print "Model saved to", model_path
