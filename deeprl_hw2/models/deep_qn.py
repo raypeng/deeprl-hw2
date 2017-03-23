@@ -161,8 +161,9 @@ class DeepQN:
         if self.doubleNetwork:
             _, next_actions = self.forwardWithoutAction(self.model_active, self.nextState_input,isActive_input=self.isActive_input)
             self.target_q = self.forwardWithAction(self.model_target,self.nextState_input,next_actions)*self.gamma+self.reward_input
-        else:    
-            self.target_q, _ = self.forwardWithoutAction(self.model_target, self.nextState_input,isActive_input=self.isActive_input)*self.gamma + self.reward_input
+        else:
+            tmp_target_q, _ = self.forwardWithoutAction(self.model_target, self.nextState_input,isActive_input=self.isActive_input)
+            self.target_q = tmp_target_q * self.gamma + self.reward_input
 
         self.getLoss()
         
