@@ -101,7 +101,7 @@ def eval_only(make_video):
     env = AtariEnv(env_name, model_name, do_render=do_render, make_video=make_video)
     sess = model.session
     train_counter = sess.run(model.global_step)
-    for eps in [1.0, 0.05, 0.00]:
+    for eps in [1., 0.05, 0.]:
         print 'running eval after train_iter', train_counter, 'with epsilon =', eps
         evaluate(eps)
         
@@ -121,9 +121,9 @@ def train():
 
         if train_counter > next_eval_iter:
             next_eval_iter += eval_freq
-            for eps in [epsilon, 0]:
-                print 'running eval after train_iter', train_counter, 'with epsilon =', eps
-                evaluate(eps)
+            eps = 0.05
+            print 'running eval after train_iter', train_counter, 'with epsilon =', eps
+            evaluate(eps)
 
         state, _, _ = env.new_game()
         while True:
