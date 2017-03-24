@@ -51,10 +51,10 @@ class AtariEnv:
             return self._dstack(self.history), clipped_reward, is_terminal
 
     def _dstack(self, states):
-        assert len(states) == self.n_frame_input
+        # assert len(states) == self.n_frame_input
         dim = states[0].shape[0]
         state = np.array([], dtype=np.float32).reshape(dim, dim, 0)
         for s in states:
             state = np.dstack((state, s))
-        assert state.shape == (self.state_dim, self.state_dim, self.n_frame_input), state.shape
+        # assert state.shape == (self.state_dim, self.state_dim, self.n_frame_input), state.shape
         return state
