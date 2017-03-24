@@ -19,7 +19,7 @@ H = 84
 NUM_ACTIONS = 3
 
 class LinearQN:
-    def __init__(self,model_dir='linear_qn',fixTarget=False,doubleNetwork=False,lr=0.00025):
+    def __init__(self,model_dir='linear_qn',fixTarget=False,doubleNetwork=False,lr=0.00025,initStd=0.05):
         # init some parameters
         self.stepCount = 0
         self.epsilon = EPSILON
@@ -37,6 +37,7 @@ class LinearQN:
         self.doubleNetwork = doubleNetwork
         self.stateDim = self.inputH*self.inputW*self.stateFrames
         self.lr = lr
+        self.initStd = initStd
         
         # Build model here
         self.W_fc1, self.b_fc1 = self.createNetwork()
@@ -59,7 +60,7 @@ class LinearQN:
 
     def createNetwork(self,isTrainable=True):
         # network input
-        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH*self.inputW*self.stateFrames,self.actionNum],stddev=0.05),trainable=isTrainable)
+        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH*self.inputW*self.stateFrames,self.actionNum],stddev=self.initStd),trainable=isTrainable)
         b_fc1 = tf.Variable(tf.zeros([self.actionNum]),trainable=isTrainable)
         return W_fc1, b_fc1
         

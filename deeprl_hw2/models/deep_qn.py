@@ -47,7 +47,7 @@ class DQNetwork:
         tf.assign(self.b_fc2, m.b_fc2)
 
 class DeepQN:
-    def __init__(self,model_dir='dqn',doubleNetwork=False,lr=0.00025):
+    def __init__(self,model_dir='dqn',doubleNetwork=False,lr=0.00025,initStd=0.1):
         # init some parameters
         self.stepCount = 0
         self.epsilon = EPSILON
@@ -64,6 +64,7 @@ class DeepQN:
         self.doubleNetwork = doubleNetwork
         self.stateDim = self.inputH*self.inputW*self.stateFrames
         self.lr = lr
+        self.initStd = initStd
         
         # Build model here
         self.model_active = DQNetwork(self.createNetwork())
@@ -183,7 +184,7 @@ class DeepQN:
         print "Model saved to", model_path
     
     def weight_variable(self,shape,isTrainable=True):
-        initial = tf.truncated_normal(shape, stddev = 0.1)
+        initial = tf.truncated_normal(shape, stddev = self.initStd)
         return tf.Variable(initial, trainable=isTrainable)
 
     def bias_variable(self,shape,isTrainable=True):
