@@ -109,8 +109,8 @@ class LinearQN:
                               0.5 * tf.square(self.delta),
                               tf.abs(self.delta) - 0.5, name='clipped_error')
 
-        self.batch_loss = tf.reduce_sum(self.delta, name='loss')
-        #self.batch_loss = tf.reduce_mean(tf.square(self.delta), name='loss')
+        # self.batch_loss = tf.reduce_sum(self.delta, name='loss')
+        self.batch_loss = tf.reduce_mean(self.delta, name='loss')
     
     def buildModel(self):
         self.curr_state = tf.placeholder(tf.float32,[self.inputH, self.inputW, self.stateFrames])
