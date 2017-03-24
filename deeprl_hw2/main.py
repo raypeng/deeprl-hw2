@@ -184,6 +184,7 @@ def train():
 
 def _train_on_samples(model, samples):
     sess = model.session
+    _t = time.time()
     state_list = np.array([s.state for s in samples]).astype(np.float32) / 255.
     action_list = np.array([[s.action] for s in samples])
     reward_list = np.array([[s.reward] for s in samples])
@@ -197,6 +198,7 @@ def _train_on_samples(model, samples):
         model.nextState_input: next_state_list,
         model.terminal_input: is_terminal_list
     })
+    print 'train_prep', time.time() - _t
     return loss
 
 if args.eval:
