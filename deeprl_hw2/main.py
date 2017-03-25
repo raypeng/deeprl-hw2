@@ -43,7 +43,7 @@ if args.debug:
 else:
     eval_freq = 50000
     eval_num_episode = 20
-
+    
 print 'learning rate', args.lr
 
 model_name = args.model
@@ -101,7 +101,8 @@ def eval_only(make_video):
     env = AtariEnv(env_name, model_name, do_render=do_render, make_video=make_video)
     sess = model.session
     train_counter = sess.run(model.global_step)
-    for eps in [1., 0.05, 0.]:
+    # for eps in [1., 0.05, 0.]:
+    for eps in [0.05]:
         print 'running eval after train_iter', train_counter, 'with epsilon =', eps
         evaluate(eps)
         
@@ -200,6 +201,7 @@ def _train_on_samples(model, samples):
     return loss
 
 if args.eval:
+    eval_num_episode = 500
     eval_only(make_video=args.video)
 else:
     train()
