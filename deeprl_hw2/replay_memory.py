@@ -34,7 +34,7 @@ class ReplayMemory:
         if self.curr_size < self.max_size:
             buf = self.buf[:self.curr_size]
         else:
-            buf = self.buf[self.curr_index:] + self.buf[:self.curr_index-1]
+            buf = self.buf[self.curr_index:] + self.buf[:self.curr_index]
         return buf
 
     def append(self, state, action, reward, next_state, is_terminal):
