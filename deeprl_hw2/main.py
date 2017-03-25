@@ -21,7 +21,7 @@ print args
 
 # Training parameters
 epsilon_init = 1.0
-epsilon_final = 0.01
+epsilon_final = 0.1
 epsilon_decay_steps = 1000000
 epsilon_step = (epsilon_final-epsilon_init)/epsilon_decay_steps
 
