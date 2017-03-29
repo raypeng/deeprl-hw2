@@ -42,7 +42,7 @@ class LinearQN:
         # Build model here
         self.W_fc1, self.b_fc1 = self.createNetwork()
         self.W_target, self.b_target = self.createNetwork(isTrainable=doubleNetwork)
-        self.resetTarget()
+
         self.buildModel()
         
         # Start a session and load the model
@@ -66,9 +66,11 @@ class LinearQN:
         
     def resetTarget(self):
         if self.hasTarget and not self.doubleNetwork:
-            tf.assign(self.W_target, self.W_fc1)
-            tf.assign(self.b_target, self.b_fc1)
             print("Target network reset")
+            return [tf.assign(self.W_target, self.W_fc1),
+                    tf.assign(self.b_target, self.b_fc1)]
+        else:
+            return None
             
     # Use target network to forward
     def forwardTarget(self,state_input,isActive_input):

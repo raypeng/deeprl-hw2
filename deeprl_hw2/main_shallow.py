@@ -113,6 +113,10 @@ def train():
     ep = 0
     epsilon = max(epsilon_final, epsilon_init + epsilon_step*train_counter)
     next_eval_iter = eval_freq * (train_counter/eval_freq + 1)
+
+    reset_op = model.resetTarget()
+    if reset_op:
+        sess.run(reset_op)
     
     while train_counter < n_train:
         # Within an episode
@@ -171,7 +175,9 @@ def train():
             total_loss += loss
 
             if train_counter % target_reset_freq == 0:
-                model.resetTarget()
+                reset_op = model.resetTarget()
+                if reset_op:
+                    sess.run(reset_op)
             
             if train_counter % model_save_freq == 0:
                 model.saveModel()

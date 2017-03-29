@@ -26,16 +26,16 @@ class DuelNetwork:
         self.b_fc_adv = b_fc_adv
     
     def copy(self, m):
-        tf.assign(self.W_conv1, m.W_conv1)
-        tf.assign(self.b_conv1, m.b_conv1)
-        tf.assign(self.W_conv2, m.W_conv2)
-        tf.assign(self.b_conv2, m.b_conv2)
-        tf.assign(self.W_fc1, m.W_fc1)
-        tf.assign(self.b_fc1, m.b_fc1)
-        tf.assign(self.W_fc2, m.W_fc2)
-        tf.assign(self.b_fc2, m.b_fc2)
-        tf.assign(self.W_fc_adv, m.W_fc_adv)
-        tf.assign(self.b_fc_adv, m.b_fc_adv)
+        return [tf.assign(self.W_conv1, m.W_conv1),
+                tf.assign(self.b_conv1, m.b_conv1),
+                tf.assign(self.W_conv2, m.W_conv2),
+                tf.assign(self.b_conv2, m.b_conv2),
+                tf.assign(self.W_fc1, m.W_fc1),
+                tf.assign(self.b_fc1, m.b_fc1),
+                tf.assign(self.W_fc2, m.W_fc2),
+                tf.assign(self.b_fc2, m.b_fc2),
+                tf.assign(self.W_fc_adv, m.W_fc_adv),
+                tf.assign(self.b_fc_adv, m.b_fc_adv)]
     
     # Take a list of states, return the greedy action
     def getPolicy(self, s_input):
@@ -80,7 +80,6 @@ class DuelDQN:
         self.model_active = DuelNetwork(self.createNetwork('active'),'active')
         self.model_target = DuelNetwork(self.createNetwork('target',isTrainable=False),'target')
         
-        self.resetTarget()
         self.buildModel()
         
         # Start a session and load the model
@@ -118,8 +117,8 @@ class DuelDQN:
         return [W_conv1,b_conv1,W_conv2,b_conv2,W_fc1,b_fc1,W_fc2,b_fc2,W_fc_adv,b_fc_adv]
     
     def resetTarget(self):
-        self.model_target.copy(self.model_active)
         print("Target network reset")
+        return self.model_target.copy(self.model_active)
         
     def getLoss(self):
         # Use huber loss for more robust performance
