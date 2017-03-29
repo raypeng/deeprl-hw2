@@ -41,7 +41,8 @@ class DQNetwork:
     def getMaxQValue(self, s_input, isActive_input):
         q_vec = self.getQVector(s_input)
         q_max = tf.multiply( tf.reduce_max(q_vec,axis=1,keep_dims=True),isActive_input )
-        return q_max
+        actions = tf.argmax(q_vec, axis=1)
+        return q_max, actions
         
     # Take a list of states and actions, return corresponding q values
     def getQValue(self, s_input, a_input):
@@ -137,8 +138,8 @@ class DeepQN:
         
         self.pred_q = self.model_active.getQValue(self.state_input,self.action_input)
         if self.doubleNetwork:
-            next_batch_action = self.model_active.getMaxQValue(self.nextState_input, self.isActive_input)
-            self.target_q = self.model_target(self.model_target,self.nextState_input, next_actions)*self.gamma+self.reward_input
+            _, next_batch_action = self.model_active.getMaxQValue(self.nextState_input, self.isActive_input)
+            self.target_q = self.model_target.getQValue(self.nextState_input, next_batch_action)*self.gamma+self.reward_input
         else:    
             self.target_q = self.model_target.getMaxQValue(self.nextState_input, self.isActive_input)
             self.target_q = self.target_q*self.gamma + self.reward_input

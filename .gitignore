@@ -8,3 +8,5 @@ dqn/
 double_dqn/
 duel_dqn/
 *~
+*.log
+weights/
