@@ -23,7 +23,7 @@ class ReplayMemory:
             yield x
 
     def __getitem__(self, i):
-        assert i < self.curr_size, 'ReplayMemory index {0} out of bound {1}'.format(i, self.curr_size)
+        # assert i < self.curr_size, 'ReplayMemory index {0} out of bound {1}'.format(i, self.curr_size)
         return self._buf[i]
 
     def __len__(self):
@@ -34,7 +34,7 @@ class ReplayMemory:
         if self.curr_size < self.max_size:
             buf = self.buf[:self.curr_size]
         else:
-            buf = self.buf[self.curr_index:] + self.buf[:self.curr_index-1]
+            buf = self.buf[self.curr_index:] + self.buf[:self.curr_index]
         return buf
 
     def append(self, state, action, reward, next_state, is_terminal):
@@ -44,7 +44,7 @@ class ReplayMemory:
         self.curr_size = min(self.curr_size + 1, self.max_size)
 
     def sample(self, batch_size):
-        assert batch_size <= self.curr_size
+        # assert batch_size <= self.curr_size
         return random.sample(self._buf, batch_size)
 
     def clear(self):

@@ -21,7 +21,7 @@ print args
 
 # Training parameters
 epsilon_init = 1.0
-epsilon_final = 0.01
+epsilon_final = 0.1
 epsilon_decay_steps = 1000000
 epsilon_step = (epsilon_final-epsilon_init)/epsilon_decay_steps
 
@@ -43,7 +43,7 @@ if args.debug:
 else:
     eval_freq = 50000
     eval_num_episode = 20
-
+    
 print 'learning rate', args.lr
 
 model_name = args.model
@@ -101,7 +101,8 @@ def eval_only(make_video):
     env = AtariEnv(env_name, model_name, do_render=do_render, make_video=make_video)
     sess = model.session
     train_counter = sess.run(model.global_step)
-    for eps in [1., 0.05, 0.]:
+    # for eps in [1., 0.05, 0.]:
+    for eps in [0.05]:
         print 'running eval after train_iter', train_counter, 'with epsilon =', eps
         evaluate(eps)
         
@@ -189,7 +190,7 @@ def _train_on_samples(model, samples):
     reward_list = np.array([[s.reward] for s in samples])
     next_state_list = np.array([s.next_state for s in samples]).astype(np.float32) / 255.
     is_terminal_list = np.array([[s.is_terminal] for s in samples]) + 0. # True -> 1
-    
+
     _, loss = sess.run([model.train_op, model.batch_loss], {
         model.state_input: state_list,
         model.action_input: action_list,
@@ -200,6 +201,7 @@ def _train_on_samples(model, samples):
     return loss
 
 if args.eval:
+    eval_num_episode = 500
     eval_only(make_video=args.video)
 else:
     train()

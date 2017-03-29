@@ -1,8 +1,10 @@
 *.pyc
 .DS_Store
 DeepRL_Homework_2.egg-info/
+monitor/
 linear_qn/
 linear_double_qn/
 dqn/
 double_dqn/
+duel_dqn/
 *~
