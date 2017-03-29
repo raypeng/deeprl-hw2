@@ -61,7 +61,7 @@ class DQNetwork:
         return q_vec
     
 class DeepQN:
-    def __init__(self,model_dir='dqn',doubleNetwork=False,lr=0.00025,initStd=0.05):
+    def __init__(self,model_dir='dqn',doubleNetwork=False,lr=0.00025,initStd=0.02):
         # init some parameters
         self.gamma = GAMMA
         self.model_dir = model_dir
@@ -91,13 +91,13 @@ class DeepQN:
     
         
     def createNetwork(self,model_name,isTrainable=True):
-        with tf.name_scope(model_name) as scope:
+        with tf.variable_scope(model_name) as scope:
             # network weights
             W_conv1 = self.weight_variable([8,8,4,16],'W_conv1',isTrainable)
             b_conv1 = self.bias_variable([16],'b_conv1',isTrainable)
 
             W_conv2 = self.weight_variable([4,4,16,32],'W_conv2',isTrainable)
-            b_conv2 = self.bias_variable([32],'b_conv1',isTrainable)
+            b_conv2 = self.bias_variable([32],'b_conv2',isTrainable)
             
             W_fc1 = self.weight_variable([2592,256],'W_fc1',isTrainable)
             b_fc1 = self.bias_variable([256],'b_fc1',isTrainable)
@@ -149,6 +149,7 @@ class DeepQN:
         #self.summary_writer = tf.train.SummaryWriter('/tensorboard', graph_def=sess.graph_def)
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
         self.optimizer = tf.train.RMSPropOptimizer(self.lr, momentum=0.95, epsilon=0.01)
+        self.grads_and_vars = self.optimizer.compute_gradients(self.batch_loss, tf.trainable_variables())
         self.train_op = self.optimizer.minimize(self.batch_loss, global_step=self.global_step)
         
     def saveModel(self):
@@ -160,12 +161,14 @@ class DeepQN:
         print("Model saved to", model_path)
     
     def weight_variable(self,shape,name,isTrainable=True):
-        initial = tf.truncated_normal(shape, stddev=self.initStd)
-        return tf.Variable(initial, name=name, trainable=isTrainable)
-
+        #initial = tf.truncated_normal(shape, stddev=self.initStd)
+        #return tf.Variable(initial, name=name, trainable=isTrainable)
+        W = tf.get_variable(name, shape=shape, dtype=tf.float32, initializer=tf.contrib.layers.xavier_initializer(),trainable=isTrainable)
+        return W
+        
     def bias_variable(self,shape,name,isTrainable=True):
         initial = tf.zeros(shape = shape)
-        return tf.Variable(initial, name=name, trainable=isTrainable)
+        return tf.get_variable(name, initializer=initial, trainable=isTrainable)
 
 def conv2d(x, W, stride, name='conv2D'):
     return tf.nn.conv2d(x, W, strides = [1, stride, stride, 1], padding = "VALID", name=name)
