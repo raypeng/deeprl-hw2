@@ -10,3 +10,4 @@ duel_dqn/
 *~
 *.log
 weights/
+_*/

@@ -12,30 +12,34 @@ NUM_ACTIONS = 3
 
 class DuelNetwork:
     def __init__(self,components,name):
-        [W_conv1,b_conv1,W_conv2,b_conv2,W_fc1,b_fc1,W_fc2,b_fc2,W_fc_adv,b_fc_adv] = components
+        [W_conv1,b_conv1,W_conv2,b_conv2,W_fc_a1,b_fc_a1,W_fc_a2,b_fc_a2,W_fc_v1,b_fc_v1,W_fc_v2,b_fc_v2] = components
         self.name = name
         self.W_conv1 = W_conv1
         self.b_conv1 = b_conv1
         self.W_conv2 = W_conv2
         self.b_conv2 = b_conv2
-        self.W_fc1 = W_fc1
-        self.b_fc1 = b_fc1
-        self.W_fc2 = W_fc2
-        self.b_fc2 = b_fc2
-        self.W_fc_adv = W_fc_adv
-        self.b_fc_adv = b_fc_adv
+        self.W_fc_a1 = W_fc_a1
+        self.b_fc_a1 = b_fc_a1
+        self.W_fc_a2 = W_fc_a2
+        self.b_fc_a2 = b_fc_a2
+        self.W_fc_v1 = W_fc_v1
+        self.b_fc_v1 = b_fc_v1
+        self.W_fc_v2 = W_fc_v2
+        self.b_fc_v2 = b_fc_v2
     
     def copy(self, m):
         return [tf.assign(self.W_conv1, m.W_conv1),
                 tf.assign(self.b_conv1, m.b_conv1),
                 tf.assign(self.W_conv2, m.W_conv2),
                 tf.assign(self.b_conv2, m.b_conv2),
-                tf.assign(self.W_fc1, m.W_fc1),
-                tf.assign(self.b_fc1, m.b_fc1),
-                tf.assign(self.W_fc2, m.W_fc2),
-                tf.assign(self.b_fc2, m.b_fc2),
-                tf.assign(self.W_fc_adv, m.W_fc_adv),
-                tf.assign(self.b_fc_adv, m.b_fc_adv)]
+                tf.assign(self.W_fc_a1, m.W_fc_a1),
+                tf.assign(self.b_fc_a1, m.b_fc_a1),
+                tf.assign(self.W_fc_a2, m.W_fc_a2),
+                tf.assign(self.b_fc_a2, m.b_fc_a2),
+                tf.assign(self.W_fc_v1, m.W_fc_v1),
+                tf.assign(self.b_fc_v1, m.b_fc_v1),
+                tf.assign(self.W_fc_v2, m.W_fc_v2),
+                tf.assign(self.b_fc_v2, m.b_fc_v2)]
     
     # Take a list of states, return the greedy action
     def getPolicy(self, s_input):
@@ -61,11 +65,14 @@ class DuelNetwork:
         h_conv2 = tf.nn.relu(conv2d(h_conv1,self.W_conv2,2) + self.b_conv2, name='conv2')
         # Dimension: 9x9x32
         h_conv2_flat = tf.reshape(h_conv2, [-1,2592], name='conv2_flat')
-        h_fc1 = tf.nn.relu(tf.matmul(h_conv2_flat,self.W_fc1) + self.b_fc1, name='fc1')
-        h_adv = tf.matmul(h_fc1,self.W_fc2) + self.b_fc2
+
+        h_fc_a1 = tf.nn.relu(tf.matmul(h_conv2_flat,self.W_fc_a1) + self.b_fc_a1, name='fc_a1')
+        h_adv = tf.matmul(h_fc_a1,self.W_fc_a2) + self.b_fc_a2
         
-        h_v= tf.nn.relu(tf.matmul(h_conv2_flat,self.W_fc_adv) + self.b_fc_adv)
-        q_vec = h_v-tf.reduce_mean(h_v)+h_adv
+        h_fc_v1 = tf.nn.relu(tf.matmul(h_conv2_flat,self.W_fc_v1) + self.b_fc_v1)
+        h_val = tf.matmul(h_fc_v1,self.W_fc_v2) + self.b_fc_v2
+
+        q_vec = h_adv - tf.reduce_mean(h_adv) + h_val
         return q_vec
 
 class DuelDQN:
@@ -105,16 +112,19 @@ class DuelDQN:
             W_conv2 = self.weight_variable([4,4,16,32],'W_conv2',isTrainable)
             b_conv2 = self.bias_variable([32],'b_conv2',isTrainable)
             
-            W_fc1 = self.weight_variable([2592,256],'W_fc1',isTrainable)
-            b_fc1 = self.bias_variable([256],'b_fc1',isTrainable)
+            W_fc_a1 = self.weight_variable([2592,256],'W_fc_a1',isTrainable)
+            b_fc_a1 = self.bias_variable([256],'b_fc_a1',isTrainable)
 
-            W_fc2 = self.weight_variable([256,NUM_ACTIONS],'W_fc2',isTrainable)
-            b_fc2 = self.bias_variable([NUM_ACTIONS],'b_fc2',isTrainable)
+            W_fc_a2 = self.weight_variable([256,NUM_ACTIONS],'W_fc_a2',isTrainable)
+            b_fc_a2 = self.bias_variable([NUM_ACTIONS],'b_fc_a2',isTrainable)
             
-            W_fc_adv = self.weight_variable([2592,1],'W_fc_adv',isTrainable)
-            b_fc_adv = self.bias_variable([1],'b_fc_adv',isTrainable)
+            W_fc_v1 = self.weight_variable([2592,256],'W_fc_v1',isTrainable)
+            b_fc_v1 = self.bias_variable([256],'b_fc_v1',isTrainable)
 
-        return [W_conv1,b_conv1,W_conv2,b_conv2,W_fc1,b_fc1,W_fc2,b_fc2,W_fc_adv,b_fc_adv]
+            W_fc_v2 = self.weight_variable([256,1],'W_fc_v2',isTrainable)
+            b_fc_v2 = self.bias_variable([1],'b_fc_v2',isTrainable)
+
+        return [W_conv1,b_conv1,W_conv2,b_conv2,W_fc_a1,b_fc_a1,W_fc_a2,b_fc_a2,W_fc_v1,b_fc_v1,W_fc_v2,b_fc_v2]
     
     def resetTarget(self):
         print("Target network reset")
