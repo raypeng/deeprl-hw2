@@ -40,8 +40,8 @@ class LinearQN:
         self.initStd = initStd
         
         # Build model here
-        self.W_fc1, self.b_fc1 = self.createNetwork()
-        self.W_target, self.b_target = self.createNetwork(isTrainable=doubleNetwork)
+        self.W_fc1, self.b_fc1 = self.createNetwork('active')
+        self.W_target, self.b_target = self.createNetwork('target',isTrainable=doubleNetwork)
 
         self.buildModel()
         
@@ -58,10 +58,12 @@ class LinearQN:
         else:
             print("Could not find old network weights")
 
-    def createNetwork(self,isTrainable=True):
-        # network input
-        W_fc1 = tf.Variable(tf.truncated_normal([self.inputH*self.inputW*self.stateFrames,self.actionNum],stddev=self.initStd),trainable=isTrainable)
-        b_fc1 = tf.Variable(tf.zeros([self.actionNum]),trainable=isTrainable)
+    def createNetwork(self,name,isTrainable=True):
+        with tf.variable_scope(model_name) as scope:
+            # network input
+            W_fc1 = tf.get_variable('W_fc1',[self.inputH*self.inputW*self.stateFrames,self.actionNum],
+                                    initializer=tf.contrib.layers.xavier_initializer(),trainable=isTrainable)
+            b_fc1 = tf.get_variable('b_fc1',initializer=tf.zeros([self.actionNum]),trainable=isTrainable)
         return W_fc1, b_fc1
         
     def resetTarget(self):
@@ -111,11 +113,7 @@ class LinearQN:
                               0.5 * tf.square(self.delta),
                               tf.abs(self.delta) - 0.5, name='clipped_error')
 
-        self.batch_loss = tf.reduce_sum(self.delta, name='loss')
-        if self.doubleNetwork:
-            # Do not train the target
-            self.batch_loss = self.batch_loss / 32.0
-        #self.batch_loss = tf.reduce_mean(tf.square(self.delta), name='loss')
+        self.batch_loss = tf.reduce_mean(self.delta, name='loss')
     
     def buildModel(self):
         self.curr_state = tf.placeholder(tf.float32,[self.inputH, self.inputW, self.stateFrames])
