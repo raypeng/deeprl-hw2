@@ -58,7 +58,7 @@ class LinearQN:
         else:
             print("Could not find old network weights")
 
-    def createNetwork(self,name,isTrainable=True):
+    def createNetwork(self,model_name,isTrainable=True):
         with tf.variable_scope(model_name) as scope:
             # network input
             W_fc1 = tf.get_variable('W_fc1',[self.inputH*self.inputW*self.stateFrames,self.actionNum],
