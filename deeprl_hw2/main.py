@@ -227,14 +227,15 @@ def _train_on_samples(model, samples):
     return loss
 
 if args.eval:
-    eval_num_episode = 10
-    bests = eval_only(make_video=args.video, video_dir=video_dir, topk=10)
+    eval_num_episode = 100
+    bests = eval_only(make_video=args.video, video_dir=video_dir, topk=20)
     for idx, score in bests:
-        search_results = glob.glob(os.path.join(video_dir, '*{0}.mp4'.format(idx)))
-        assert search_results != None and len(search_results) == 1
+        search_results = glob.glob(os.path.join(video_dir, '*{0}.mp4'.format(str(idx).zfill(6))))
+        assert search_results != None and len(search_results) == 1, str(search_results)
         old_path = search_results[0]
         old_dir, old_file = old_path.rsplit('/', 1)
-        new_path = os.path.join(old_dir, str(score) + '_' + old_file)
+        new_path = os.path.join(old_dir, str(int(score)) + '_' + old_file)
+        print old_path, new_path
         os.system('mv {0} {1}'.format(old_path, new_path))
 else:
     train()
