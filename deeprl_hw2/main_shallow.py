@@ -107,16 +107,19 @@ def evaluate(epsilon):
     avg_score = sum(scores) / eval_num_episode
     avg_step = sum(steps) / eval_num_episode
     print '\033[0;31m[eval][eps={0}]\033[0m average_reward: {1} average_score: {2} average_step: {3}'.format(epsilon, avg_reward, avg_score, avg_step)
+    return scores
 
 def eval_only(make_video):
     global env
     env = AtariEnv(env_name, model_name, do_render=do_render, make_video=make_video)
     sess = model.session
     train_counter = sess.run(model.global_step)
-    # for eps in [1., 0.05, 0.]:
-    for eps in [0.05]:
-        print 'running eval after train_iter', train_counter, 'with epsilon =', eps
-        evaluate(eps)
+    eps = 0.05
+    print 'running eval after train_iter', train_counter, 'with epsilon =', eps
+    scores = evaluate(eps)
+    best_indices = np.argsort(-np.array(scores))
+    for idx in best_indices[:3]:
+        print 'video {0} gets {1} points'.format(idx, scores[idx])
         
 def train():
     sess = model.session
@@ -219,7 +222,7 @@ def _train_on_samples(model, samples):
     return loss
 
 if args.eval:
-    eval_num_episode = 500
+    eval_num_episode = 100
     eval_only(make_video=args.video)
 else:
     train()
