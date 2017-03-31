@@ -5,6 +5,7 @@ from shallow.linear_qn import LinearQN
 from shallow.deep_qn import DeepQN
 from shallow.duel_dqn import DuelDQN
 
+import os
 import time
 import numpy as np
 import random
@@ -14,7 +15,8 @@ parser = argparse.ArgumentParser('main driver')
 parser.add_argument('--model', required=True, help='choose from [linear_qn, linear_double_qn, dqn, double_dqn, duel]')
 parser.add_argument('--lr', default=0.00025, type=float, help='specfy learning rate, default=0.00025')
 parser.add_argument('--eval', default=False, action='store_true', help='whether to evaluate only')
-parser.add_argument('--video', default=False, action='store_true', help='whether to produce video [only use when eval]')
+parser.add_argument('--video', default=False, action='store_true', help='whether to produce video [only use with --eval]')
+parser.add_argument('--model_dir', default='same', help='directory to model file to use for producing video capture [only use with --eval --video]')
 parser.add_argument('--debug', default=False, action='store_true', help='whether use debug mode, shrink initial_buffer, eval_freq, eval_num_episode')
 parser.add_argument('--render', default=False, action='store_true', help='whether to render')
 args = parser.parse_args()
@@ -48,16 +50,25 @@ else:
 print 'learning rate', args.lr
 
 model_name = args.model
+if args.model_dir == 'same':
+    model_dir = model_name
+else:
+    model_dir, model_iter = args.model_dir.split('.')[0].rsplit('/', 1)
+    assert os.path.exists(model_dir)
+    cmd = 'echo \'model_checkpoint_path: "{0}"\' > {1}'.format(model_iter, os.path.join(model_dir, 'checkpoint'))
+    print cmd
+    os.system(cmd)
+
 if model_name == 'linear_qn':
-    model = LinearQN(model_dir=model_name, fixTarget=True, doubleNetwork=False, lr=args.lr)
+    model = LinearQN(model_dir=model_dir, fixTarget=True, doubleNetwork=False, lr=args.lr)
 elif model_name == 'linear_double_qn':
-    model = LinearQN(model_dir=model_name, fixTarget=True, doubleNetwork=True, lr=args.lr)
+    model = LinearQN(model_dir=model_dir, fixTarget=True, doubleNetwork=True, lr=args.lr)
 elif model_name == 'dqn':
-    model = DeepQN(model_dir=model_name, doubleNetwork=False, lr=args.lr)
+    model = DeepQN(model_dir=model_dir, doubleNetwork=False, lr=args.lr)
 elif model_name == 'double_dqn':
-    model = DeepQN(model_dir=model_name, doubleNetwork=True, lr=args.lr)
+    model = DeepQN(model_dir=model_dir, doubleNetwork=True, lr=args.lr)
 elif model_name == 'duel_dqn':
-    model = DuelDQN(model_dir=model_name, lr=args.lr)
+    model = DuelDQN(model_dir=model_dir, lr=args.lr)
 else:
     assert False, 'not supported'
 
