@@ -6,10 +6,12 @@ from models.deep_qn import DeepQN
 from models.duel_dqn import DuelDQN
 
 import os
+import glob
 import time
 import numpy as np
 import random
 import argparse
+
 
 parser = argparse.ArgumentParser('main driver')
 parser.add_argument('--model', required=True, help='choose from [linear_qn, linear_double_qn, dqn, double_dqn, duel]')
@@ -52,10 +54,12 @@ print 'learning rate', args.lr
 model_name = args.model
 if args.model_dir == 'same':
     model_dir = model_name
+    video_dir = None
 else:
     model_dir, model_iter = args.model_dir.split('.')[0].rsplit('/', 1)
     assert os.path.exists(model_dir)
     cmd = 'echo \'model_checkpoint_path: "{0}"\' > {1}'.format(model_iter, os.path.join(model_dir, 'checkpoint'))
+    video_dir = os.path.join(model_dir, model_iter.rsplit('-')[-1])
     print cmd
     os.system(cmd)
 
@@ -109,17 +113,18 @@ def evaluate(epsilon):
     print '\033[0;31m[eval][eps={0}]\033[0m average_reward: {1} average_score: {2} average_step: {3}'.format(epsilon, avg_reward, avg_score, avg_step)
     return scores
 
-def eval_only(make_video):
+def eval_only(make_video, video_dir, topk):
     global env
-    env = AtariEnv(env_name, model_name, do_render=do_render, make_video=make_video)
+    env = AtariEnv(env_name, model_name, do_render=do_render, make_video=make_video, video_dir=video_dir)
     sess = model.session
     train_counter = sess.run(model.global_step)
     eps = 0.05
     print 'running eval after train_iter', train_counter, 'with epsilon =', eps
     scores = evaluate(eps)
     best_indices = np.argsort(-np.array(scores))
-    for idx in best_indices[:3]:
+    for idx in best_indices[:topk]:
         print 'video {0} gets {1} points'.format(idx, scores[idx])
+    return [(idx, scores[idx]) for idx in best_indices]
         
 def train():
     sess = model.session
@@ -222,7 +227,14 @@ def _train_on_samples(model, samples):
     return loss
 
 if args.eval:
-    eval_num_episode = 100
-    eval_only(make_video=args.video)
+    eval_num_episode = 10
+    bests = eval_only(make_video=args.video, video_dir=video_dir, topk=10)
+    for idx, score in bests:
+        search_results = glob.glob(os.path.join(video_dir, '*{0}.mp4'.format(idx)))
+        assert search_results != None and len(search_results) == 1
+        old_path = search_results[0]
+        old_dir, old_file = old_path.rsplit('/', 1)
+        new_path = os.path.join(old_dir, str(score) + '_' + old_file)
+        os.system('mv {0} {1}'.format(old_path, new_path))
 else:
     train()

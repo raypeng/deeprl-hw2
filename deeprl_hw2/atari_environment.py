@@ -10,14 +10,20 @@ from collections import deque
 
 
 class AtariEnv:
-    def __init__(self, env_name, model, do_render=False, make_video=False, state_dim=84, n_frame_input=4):
+    def __init__(self, env_name, model, do_render=False, make_video=False, video_dir=None, state_dim=84, n_frame_input=4):
         self.env = gym.make(env_name)
         if make_video:
-            dt = datetime.now().strftime('%m-%d-%H:%M:%S')
-            monitor_path = os.path.join('monitor', model, dt)
+            if video_dir:
+                monitor_path = video_dir
+                use_force = True
+            else:
+                dt = datetime.now().strftime('%m-%d-%H:%M:%S')
+                monitor_path = os.path.join('monitor', model, dt)
+                use_force = False
             every_iter = lambda x: True
             self.env = wrappers.Monitor(self.env,
                                         monitor_path,
+                                        force=use_force,
                                         video_callable=every_iter,
                                         write_upon_reset=True)
         self.state_dim = state_dim
