@@ -1,9 +1,11 @@
 from atari_environment import AtariEnv
 from replay_memory import Sample, ReplayMemory
+
 from models.linear_qn import LinearQN
 from models.deep_qn import DeepQN
 from models.duel_dqn import DuelDQN
 
+import os
 import time
 import numpy as np
 import random
@@ -13,7 +15,8 @@ parser = argparse.ArgumentParser('main driver')
 parser.add_argument('--model', required=True, help='choose from [linear_qn, linear_double_qn, dqn, double_dqn, duel]')
 parser.add_argument('--lr', default=0.00025, type=float, help='specfy learning rate, default=0.00025')
 parser.add_argument('--eval', default=False, action='store_true', help='whether to evaluate only')
-parser.add_argument('--video', default=False, action='store_true', help='whether to produce video [only use when eval]')
+parser.add_argument('--video', default=False, action='store_true', help='whether to produce video [only use with --eval]')
+parser.add_argument('--model_dir', default='same', help='directory to model file to use for producing video capture [only use with --eval --video]')
 parser.add_argument('--debug', default=False, action='store_true', help='whether use debug mode, shrink initial_buffer, eval_freq, eval_num_episode')
 parser.add_argument('--render', default=False, action='store_true', help='whether to render')
 args = parser.parse_args()
@@ -47,16 +50,25 @@ else:
 print 'learning rate', args.lr
 
 model_name = args.model
+if args.model_dir == 'same':
+    model_dir = model_name
+else:
+    model_dir, model_iter = args.model_dir.split('.')[0].rsplit('/', 1)
+    assert os.path.exists(model_dir)
+    cmd = 'echo \'model_checkpoint_path: "{0}"\' > {1}'.format(model_iter, os.path.join(model_dir, 'checkpoint'))
+    print cmd
+    os.system(cmd)
+
 if model_name == 'linear_qn':
-    model = LinearQN(model_dir=model_name, fixTarget=True, doubleNetwork=False, lr=args.lr)
+    model = LinearQN(model_dir=model_dir, fixTarget=True, doubleNetwork=False, lr=args.lr)
 elif model_name == 'linear_double_qn':
-    model = LinearQN(model_dir=model_name, fixTarget=True, doubleNetwork=True, lr=args.lr)
+    model = LinearQN(model_dir=model_dir, fixTarget=True, doubleNetwork=True, lr=args.lr)
 elif model_name == 'dqn':
-    model = DeepQN(model_dir=model_name, doubleNetwork=False, lr=args.lr)
+    model = DeepQN(model_dir=model_dir, doubleNetwork=False, lr=args.lr)
 elif model_name == 'double_dqn':
-    model = DeepQN(model_dir=model_name, doubleNetwork=True, lr=args.lr)
+    model = DeepQN(model_dir=model_dir, doubleNetwork=True, lr=args.lr)
 elif model_name == 'duel_dqn':
-    model = DuelDQN(model_dir=model_name, lr=args.lr)
+    model = DuelDQN(model_dir=model_dir, lr=args.lr)
 else:
     assert False, 'not supported'
 
@@ -95,16 +107,19 @@ def evaluate(epsilon):
     avg_score = sum(scores) / eval_num_episode
     avg_step = sum(steps) / eval_num_episode
     print '\033[0;31m[eval][eps={0}]\033[0m average_reward: {1} average_score: {2} average_step: {3}'.format(epsilon, avg_reward, avg_score, avg_step)
+    return scores
 
 def eval_only(make_video):
     global env
     env = AtariEnv(env_name, model_name, do_render=do_render, make_video=make_video)
     sess = model.session
     train_counter = sess.run(model.global_step)
-    # for eps in [1., 0.05, 0.]:
-    for eps in [0.05]:
-        print 'running eval after train_iter', train_counter, 'with epsilon =', eps
-        evaluate(eps)
+    eps = 0.05
+    print 'running eval after train_iter', train_counter, 'with epsilon =', eps
+    scores = evaluate(eps)
+    best_indices = np.argsort(-np.array(scores))
+    for idx in best_indices[:3]:
+        print 'video {0} gets {1} points'.format(idx, scores[idx])
         
 def train():
     sess = model.session
@@ -112,6 +127,10 @@ def train():
     ep = 0
     epsilon = max(epsilon_final, epsilon_init + epsilon_step*train_counter)
     next_eval_iter = eval_freq * (train_counter/eval_freq + 1)
+
+    reset_op = model.resetTarget()
+    if reset_op:
+        sess.run(reset_op)
     
     while train_counter < n_train:
         # Within an episode
@@ -170,7 +189,9 @@ def train():
             total_loss += loss
 
             if train_counter % target_reset_freq == 0:
-                model.resetTarget()
+                reset_op = model.resetTarget()
+                if reset_op:
+                    sess.run(reset_op)
             
             if train_counter % model_save_freq == 0:
                 model.saveModel()
@@ -201,7 +222,7 @@ def _train_on_samples(model, samples):
     return loss
 
 if args.eval:
-    eval_num_episode = 500
+    eval_num_episode = 100
     eval_only(make_video=args.video)
 else:
     train()
